@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "required": [
+    "projects",
+    "applications",
+    "actionTypes",
+    "products",
+    "places"
+  ],
+  "properties": {
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "minItems": 1
+    },
+    "applications": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "actionTypes": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "products": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "places": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}
