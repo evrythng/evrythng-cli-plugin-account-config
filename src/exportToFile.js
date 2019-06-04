@@ -3,27 +3,11 @@
  * All rights reserved. Use of this material is subject to license.
  */
 
-const evrythng = require('evrythng');
 const fs = require('fs');
 
-let cli;
 let operator;
 let projects;
 let unknownProjects = [];
-
-/**
- * Create an Operator scope using the provided API key.
- *
- * @returns {Promise} Promise that resolves to the initialised Operator scope.
- */
-const getOperator = async () => {
-  const apiKey = cli.getSwitches().API_KEY;
-  if (!apiKey) {
-    throw new Error('Must specify --api-key as the account admin Operator.');
-  }
-
-  return new evrythng.Operator(apiKey).init();
-};
 
 /**
  * Map a project ID to a known project name, or else leave as is.
@@ -50,10 +34,14 @@ const mapProjectName = (id) => {
  * @param {object} parent - This resource type's parent type or scope.
  * @param {string} type - Resource type as property of scope.
  * @param {boolean} [mapProjectIds] - If true, attempt to map project IDs to name.
+ * @param {boolean} [report] - If true, report which resource is being read.
  * @returns {object[]} Array of read resources.
  */
-const getAllResources = async (parent, type, mapProjectIds = true) => {
-  console.log(`Reading all of '${type}'...`);
+const getAllResources = async (parent, type, mapProjectIds = true, report = true) => {
+  if (report) {
+    console.log(`Reading all of '${type}'...`);
+  }
+
   const it = parent[type]().setPerPage(100).setWithScopes().pages();
   const result = [];
 
@@ -68,7 +56,6 @@ const getAllResources = async (parent, type, mapProjectIds = true) => {
     });
   }
 
-  console.log(`Read ${result.length} of '${type}'`);
   return result;
 };
 
@@ -78,20 +65,24 @@ const getAllResources = async (parent, type, mapProjectIds = true) => {
  * @param {object[]} projects - The projects to use.
  * @returns {Promise} Promise that resolves to all the applications.
  */
-const getAllApplications = async projects =>
-  Promise.all(projects.map(p => getAllResources(operator.project(p.id), 'application')));
+const getAllApplications = async projects => {
+  console.log('Reading all of \'application\'...');
+  return Promise.all(projects.map(p => getAllResources(operator.project(p.id), 'application', true, false)));
+}
 
 /**
  * Export all account resources of selected types to a JSON file.
  *
  * @param {string} jsonFile - Path to the output file.
+ * @param {object} operatorScope - Operator scope for this account.
  */
-const exportToFile = async (jsonFile) => {
+const exportToFile = async (jsonFile, operatorScope) => {
+  operator = operatorScope;
+
   if (!jsonFile) {
-    throw new Error('Please supply $jsonFile to an output file.');
+    throw new Error('Please specify $jsonFile to an output file.');
   }
 
-  operator = await getOperator();
   projects = await getAllResources(operator, 'project', false);
   const [applications, products, actionTypes, places] = await Promise.all([
     getAllApplications(projects),
@@ -109,24 +100,13 @@ const exportToFile = async (jsonFile) => {
   };
 
   fs.writeFileSync(jsonFile, JSON.stringify(accountConfig, null, 2), 'utf8');
-  console.log(`Wrote ${jsonFile}`);
-  console.log(`\nThe following projects were referenced by resources, but not found in the account:\n${unknownProjects.join(', ')}`);
+  
+  console.log(`\nExport summary:\n  ${projects.length} projects\n  ${applications.length} applications`);
+  console.log(`  ${products.length} products\n  ${actionTypes.length} action types\n  ${places.length} places\n`);
+
+  if (unknownProjects.length) {
+    console.log(`\nUnknown projects:\n${unknownProjects.join(', ')}`);
+  }
 };
 
-module.exports = (api) => {
-  cli = api;
-
-  const command = {
-    about: 'Manage account resource configuration.',
-    firstArg: 'account-config',
-    operations: {
-      export: {
-        execute: async ([, jsonFile]) => exportToFile(jsonFile),
-        pattern: 'export $jsonFile',
-        helpPattern: 'export $jsonFile --api-key $OPERATOR_API_KEY',
-      },
-    },
-  };
-
-  api.registerCommand(command);
-};
+module.exports = exportToFile;
