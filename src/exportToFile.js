@@ -67,8 +67,9 @@ const getAllResources = async (parent, type, mapProjectIds = true, report = true
  */
 const getAllApplications = async projects => {
   console.log('Reading all of \'application\'...');
-  return Promise.all(projects.map(p => getAllResources(operator.project(p.id), 'application', true, false)));
-}
+  const res = await Promise.all(projects.map(p => getAllResources(operator.project(p.id), 'application', true, false)));
+  return res.reduce((result, item) => result.concat(item), []);
+};
 
 /**
  * Export all account resources of selected types to a JSON file.
