@@ -60,7 +60,27 @@ const mapProjectNameToId = (name) => {
  * @param {string} type - The resource type, property of Operator scope.
  * @returns {function} Function that returns the creation task promise.
  */
-const buildCreateResourceTask = (parent, payload, type) => async () => parent[type]().create(payload);
+const buildCreateTask = (parent, payload, type) => async () => parent[type]().create(payload);
+
+/**
+ * Sequentially run all create tasks, showing progress.
+ *
+ * @param {function[]} tasks - List of tasks to run.
+ * @param {string} type - Type label to use for progress.
+ * @returns {Promise} Promise that resolves to array of all response bodies.
+ */
+const runTypeTasks = async (tasks, type) => {
+  const results = [];
+  for (const task of tasks) {
+    results.push(await task());
+    printProgress(`Importing ${type}s`, tasks.indexOf(task), tasks.length);
+  }
+
+  process.stdout.clearLine();
+  process.stdout.cursorTo(0);
+  process.stdout.write(`Imported ${tasks.length} ${type}s.\n`);
+  return results;
+};
 
 /**
  * Import a list of resources, scoping to project if desired.
@@ -69,6 +89,7 @@ const buildCreateResourceTask = (parent, payload, type) => async () => parent[ty
  * @param {object[]} resources - List of resources to import.
  * @param {string} type - The resource type, property of Operator scope.
  * @param {boolean} [resolveScopes] - If true, attempt to resolve named project scopes.
+ * @returns {Promise} Promise that resolves to array of all task results.
  */
 const importResources = async (parent, resources, type, resolveScopes = true) => {
   const tasks = resources.map((item) => {
@@ -80,26 +101,26 @@ const importResources = async (parent, resources, type, resolveScopes = true) =>
       };
     }
 
-    return buildCreateResourceTask(parent, item, type);
+    return buildCreateTask(parent, item, type);
   });
 
-  for (const task of tasks) {
-    await task();
-    printProgress(`Importing ${type}s`, tasks.indexOf(task), tasks.length);
-  }
-
-  process.stdout.clearLine();
-  process.stdout.cursorTo(0);
-  process.stdout.write(`Imported ${tasks.length} ${type}s.\n`);
+  return runTypeTasks(tasks, type);
 };
 
+/**
+ * Import all applications to projects named in their scopes.
+ *
+ * @param {object[]} applications - The applications to import.
+ */
 const importApplications = async (applications) => {
-  for (const app of applications) {
-    const [projectName] = app.scopes.projects;
+  const tasks = applications.map((item) => {
+    const [projectName] = item.scopes.projects;
     const project = projects.find(p => p.name === projectName);
 
-    await buildCreateResourceTask(operator.project(project.id), app, 'application')();
-  }
+    return buildCreateTask(operator.project(project.id), item, 'application');
+  });
+
+  return runTypeTasks(tasks, 'application');
 };
 
 /**
@@ -117,15 +138,20 @@ const importFromFile = async (jsonFile, operatorScope) => {
 
   const accountConfig = JSON.parse(fs.readFileSync(jsonFile, 'utf8'));
   validateAccountConfig(accountConfig);
-  console.log('File is valid');
+  console.log('File is valid\n');
 
-  projects = accountConfig.projects;
+  ({ projects } = accountConfig);
   const {
     applications, products, actionTypes, places, roles, rolePermissions,
   } = accountConfig;
 
-  await importResources(operator, projects, 'project', false);
+  // Update projects with ones imported
+  projects = await importResources(operator, projects, 'project', false);
+
   await importApplications(applications);
+  await importResources(operator, products, 'product');
+
+  console.log('Import complete!');
 };
 
 module.exports = importFromFile;
