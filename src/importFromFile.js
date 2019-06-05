@@ -8,6 +8,7 @@ const fs = require('fs');
 
 let operator;
 let projects;
+let roles;
 
 const SCHEMA = require('../data/account-config.schema.json');
 
@@ -25,17 +26,24 @@ const validateAccountConfig = (accountConfig) => {
 };
 
 /**
+ * Update the last log line, instead of creating a new one.
+ *
+ * @param {string} msg - The new line message.
+ */
+const updateLine = (msg) => {
+  process.stdout.clearLine();
+  process.stdout.cursorTo(0);
+  process.stdout.write(msg);
+};
+
+/**
  * Update a log line with progress instead of issuing multiple lines.
  *
  * @param {string} label - Progress label for context.
  * @param {number} index - Current progress index.
  * @param {number} max - Total items to progress though.
  */
-const printProgress = (label, index, max) => {
-  process.stdout.clearLine();
-  process.stdout.cursorTo(0);
-  process.stdout.write(`${label}: ${index + 1}/${max}`);
-};
+const printProgress = (label, index, max) => updateLine(`${label}: ${index + 1}/${max}`);
 
 /**
  * Map a project name to an ID. If it is not found, an error is thrown.
@@ -75,6 +83,11 @@ const buildCreateTask = (parent, payload, type) => async () => {
 };
 
 /**
+ * Like buildCreateTask(), but for PUT requests.
+ */
+const buildUpdateTask = (parent, payload, type) => async () => parent[type]().update(payload);
+
+/**
  * Sequentially run all create tasks, showing progress.
  *
  * @param {function[]} tasks - List of tasks to run.
@@ -84,13 +97,15 @@ const buildCreateTask = (parent, payload, type) => async () => {
 const runTypeTasks = async (tasks, type) => {
   const results = [];
   for (const task of tasks) {
-    results.push(await task());
     printProgress(`Importing ${type}s`, tasks.indexOf(task), tasks.length);
+    try {
+      results.push(await task());
+    } catch (e) {
+      updateLine(`Error for ${type}: ${e.message || e.errors[0]}\n`);
+    }
   }
 
-  process.stdout.clearLine();
-  process.stdout.cursorTo(0);
-  process.stdout.write(`Imported ${tasks.length} ${type}s.\n`);
+  updateLine(`Imported ${results.length} ${type}s.\n`);
   return results;
 };
 
@@ -123,6 +138,7 @@ const importResources = async (parent, resources, type, resolveScopes = true) =>
  * Import all applications to projects named in their scopes.
  *
  * @param {object[]} applications - The applications to import.
+ * @returns {Promise} Promise that resolves to array of all task results.
  */
 const importApplications = async (applications) => {
   const tasks = applications.map((item) => {
@@ -133,6 +149,25 @@ const importApplications = async (applications) => {
   });
 
   return runTypeTasks(tasks, 'application');
+};
+
+/**
+ * Import all permissions for all roles.
+ *
+ * @param {object[]} permissions - List of permissions objects.
+ * @returns {Promise} Promise that resolves to array of all task results.
+ */
+const importRolePermissions = async (permissions) => {
+  const tasks = permissions.map((item) => {
+    // Find the right role, then remove meta object
+    const meta = item.find(p => p.roleName);
+    item.splice(item.indexOf(meta), 1);
+
+    const role = roles.find(p => p.name === meta.roleName);
+    return buildUpdateTask(operator.role(role.id), item, 'permission');
+  });
+
+  return runTypeTasks(tasks, 'permission');
 };
 
 /**
@@ -152,16 +187,20 @@ const importFromFile = async (jsonFile, operatorScope) => {
   validateAccountConfig(accountConfig);
   console.log('File is valid\n');
 
-  ({ projects } = accountConfig);
+  ({ projects, roles } = accountConfig);
   const {
-    applications, products, actionTypes, places, roles, rolePermissions,
+    applications, products, actionTypes, places, rolePermissions,
   } = accountConfig;
 
-  // Update projects with ones imported
+  // Update resources with ones imported
   projects = await importResources(operator, projects, 'project', false);
+  roles = await importResources(operator, roles, 'role');
 
   await importApplications(applications);
   await importResources(operator, products, 'product');
+  await importResources(operator, actionTypes, 'actionType');
+  await importResources(operator, places, 'place');
+  await importRolePermissions(rolePermissions);
 
   console.log('Import complete!');
 };
