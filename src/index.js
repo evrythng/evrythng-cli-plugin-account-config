@@ -6,19 +6,30 @@
 const evrythng = require('evrythng');
 const exportToFile = require('./exportToFile');
 const importFromFile = require('./importFromFile');
+const compareAccounts = require('./compareAccounts');
 
 let cli;
 
 /**
  * Create an Operator scope using the provided API key.
  *
+ * @param {string} apiKey - Specific key, else the current is used.
  * @returns {Promise} Promise that resolves to the initialised Operator scope.
  */
-const getOperator = async () => {
+const getOperator = async (apiKey) => {
   const config = cli.getConfig();
+
+  // Get operator used
   const operators = config.get('operators');
   const using = config.get('using');
-  return new evrythng.Operator(operators[using].apiKey).init();
+
+  // Apply their region
+  const current = operators[using];
+  const regions = config.get('regions');
+  const apiUrl = regions[current.region];
+  evrythng.setup({ apiUrl });
+
+  return new evrythng.Operator(apiKey || current.apiKey).init();
 };
 
 module.exports = (api) => {
@@ -35,6 +46,18 @@ module.exports = (api) => {
       import: {
         execute: async ([, jsonFile]) => importFromFile(jsonFile, await getOperator()),
         pattern: 'import $jsonFile',
+      },
+      compare: {
+        execute: async () => {
+          const { API_KEY: otherApiKey } = api.getSwitches();
+          if (!otherApiKey) {
+            throw new Error('Specify the \'other\' account using --api-key');
+          }
+
+          return compareAccounts(await getOperator(), await getOperator(otherApiKey));
+        },
+        pattern: 'compare',
+        helpPattern: 'compare --api-key $OTHER_API_KEY',
       },
     },
   };

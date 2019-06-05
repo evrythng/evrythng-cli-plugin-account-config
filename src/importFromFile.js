@@ -208,7 +208,7 @@ const importFromFile = async (jsonFile, operatorScope) => {
   await importResources(operator, places, 'place');
   await importRolePermissions(rolePermissions);
 
-  console.log('Import complete!');
+  console.log('\nImport complete!');
 };
 
 module.exports = importFromFile;
