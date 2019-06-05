@@ -10,7 +10,10 @@ let operator;
 let projects;
 let roles;
 
+/** The account configuration file schema. */
 const SCHEMA = require('../data/account-config.schema.json');
+/** Resource types that don't require scope updates. */
+const NO_SCOPES = ['project', 'application'];
 
 /**
  * Throw an error if the account configuration loaded does not pass the schema.
@@ -73,7 +76,7 @@ const buildCreateTask = (parent, payload, type) => async () => {
   const res = await parent[type]().create(payload);
 
   // Scope update not needed or supported
-  if (['project', 'application'].includes(type)) {
+  if (NO_SCOPES.includes(type)) {
     return res;
   }
 
@@ -96,16 +99,19 @@ const buildUpdateTask = (parent, payload, type) => async () => parent[type]().up
  */
 const runTypeTasks = async (tasks, type) => {
   const results = [];
+  let errored = false;
+  
   for (const task of tasks) {
     printProgress(`Importing ${type}s`, tasks.indexOf(task), tasks.length);
     try {
       results.push(await task());
     } catch (e) {
       updateLine(`Error for ${type}: ${e.message || e.errors[0]}\n`);
+      errored = true;
     }
   }
 
-  updateLine(`Imported ${results.length} ${type}s.\n`);
+  updateLine(`Imported ${tasks.length} ${type}s ${errored ? 'with errors': ''}\n`);
   return results;
 };
 
