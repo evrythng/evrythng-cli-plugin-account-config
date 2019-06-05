@@ -56,6 +56,7 @@ const getAllResources = async (parent, type, mapProjectIds = true, report = true
       if (mapProjectIds && item.scopes && item.scopes.projects) {
         item.scopes.projects = item.scopes.projects.map(mapProjectName);
       }
+
       result.push(item);
     });
   }

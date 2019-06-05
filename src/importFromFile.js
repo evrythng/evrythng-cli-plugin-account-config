@@ -54,13 +54,25 @@ const mapProjectNameToId = (name) => {
 
 /**
  * Return a task function that creates a given resource.
+ * Also performs update for project and user scopes.
  *
  * @param {object} parent - Parent resource or scope.
  * @param {object} payload - The payload to use.
  * @param {string} type - The resource type, property of Operator scope.
  * @returns {function} Function that returns the creation task promise.
  */
-const buildCreateTask = (parent, payload, type) => async () => parent[type]().create(payload);
+const buildCreateTask = (parent, payload, type) => async () => {
+  const res = await parent[type]().create(payload);
+
+  // Scope update not needed or supported
+  if (['project', 'application'].includes(type)) {
+    return res;
+  }
+
+  // Rescope using resolved scopes
+  const updatePayload = { scopes: payload.scopes };
+  return parent[type](res.id).update(updatePayload);
+};
 
 /**
  * Sequentially run all create tasks, showing progress.
