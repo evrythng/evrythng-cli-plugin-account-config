@@ -9,6 +9,10 @@ let operator;
 let projects;
 let unknownProjects = [];
 
+const DEFAULT_ROLES = ['admin', 'none', 'Base Application User'];
+const DEFAULT_ACTION_TYPES = ['checkins', 'commissions', 'decommissions', 'encodings', 
+  'implicitScans', 'invalidScans', 'scans', 'shares'];
+
 /**
  * Map a project ID to a known project name, or else leave as is.
  *
@@ -39,7 +43,7 @@ const mapProjectName = (id) => {
  */
 const getAllResources = async (parent, type, mapProjectIds = true, report = true) => {
   if (report) {
-    console.log(`Reading all of '${type}'...`);
+    console.log(`Reading all ${type}s...`);
   }
 
   const it = parent[type]().setPerPage(100).setWithScopes().pages();
@@ -60,15 +64,42 @@ const getAllResources = async (parent, type, mapProjectIds = true, report = true
 };
 
 /**
+ * Get all applications for a given project.
+ *
+ * @param {object} project - Project to use.
+ * @returns {Promise} Promise that resolves to an array of applications.
+ */
+const getProjectApplications = project =>
+  getAllResources(operator.project(project.id), 'application', true, false);
+
+/**
  * For each project, read all applications and append name scopes.
  *
  * @param {object[]} projects - The projects to use.
  * @returns {Promise} Promise that resolves to all the applications.
  */
 const getAllApplications = async projects => {
-  console.log('Reading all of \'application\'...');
-  const res = await Promise.all(projects.map(p => getAllResources(operator.project(p.id), 'application', true, false)));
+  console.log('Reading all applications...');
+  
+  const res = await Promise.all(projects.map(getProjectApplications));
   return res.reduce((result, item) => result.concat(item), []);
+};
+
+/**
+ * For each role, read all permissions.
+ * As a special case, each is annotated with a 'roleName' property to enable import.
+ *
+ * @param {object[]} roles - The roles to use.
+ * @returns {Promise} Promise that resolves to an array of role permission sets
+ */
+const getAllRolePermissions = async (roles) => {
+  console.log('Reading all role permissions...');
+
+  return Promise.all(roles.map(async (p) => {
+    const permissions = await operator.role(p.id).permission().read();
+    permissions.push({ roleName: p.name });
+    return permissions;
+  }));
 };
 
 /**
@@ -85,12 +116,18 @@ const exportToFile = async (jsonFile, operatorScope) => {
   }
 
   projects = await getAllResources(operator, 'project', false);
-  const [applications, products, actionTypes, places] = await Promise.all([
+  const [applications, products, actionTypes, places, roles] = await Promise.all([
     getAllApplications(projects),
     getAllResources(operator, 'product'),
-    getAllResources(operator, 'actionType'),
+    getAllResources(operator, 'actionType')
+      .then(res => res.filter(p => !DEFAULT_ACTION_TYPES.includes(p.name))),
     getAllResources(operator, 'place'),
+    getAllResources(operator, 'role').then(res => res.filter(p => !DEFAULT_ROLES.includes(p.name))),
   ]);
+
+
+  // Followups
+  const rolePermissions = await getAllRolePermissions(roles);
 
   const accountConfig = {
     projects,
@@ -98,15 +135,17 @@ const exportToFile = async (jsonFile, operatorScope) => {
     products,
     actionTypes,
     places,
+    roles,
+    rolePermissions,
   };
-
   fs.writeFileSync(jsonFile, JSON.stringify(accountConfig, null, 2), 'utf8');
   
   console.log(`\nExport summary:\n  ${projects.length} projects\n  ${applications.length} applications`);
-  console.log(`  ${products.length} products\n  ${actionTypes.length} action types\n  ${places.length} places\n`);
+  console.log(`  ${products.length} products\n  ${actionTypes.length} action types`);
+  console.log(`  ${places.length} places\n  ${roles.length} roles\n  ${rolePermissions.length} role permissions`);
 
   if (unknownProjects.length) {
-    console.log(`\nUnknown projects:\n${unknownProjects.join(', ')}`);
+    console.log(`\nUnknown projects:\n${JSON.stringify(unknownProjects)}`);
   }
 };
 

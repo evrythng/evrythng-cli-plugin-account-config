@@ -121,7 +121,7 @@ const importFromFile = async (jsonFile, operatorScope) => {
 
   projects = accountConfig.projects;
   const {
-    applications, products, actionTypes, places,
+    applications, products, actionTypes, places, roles, rolePermissions,
   } = accountConfig;
 
   await importResources(operator, projects, 'project', false);
