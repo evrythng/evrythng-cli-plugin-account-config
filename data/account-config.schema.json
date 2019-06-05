@@ -5,7 +5,9 @@
     "applications",
     "actionTypes",
     "products",
-    "places"
+    "places",
+    "roles",
+    "rolePermissions"
   ],
   "properties": {
     "projects": {
@@ -37,6 +39,21 @@
       "type": "array",
       "items": {
         "type": "object"
+      }
+    },
+    "roles": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "rolePermissions": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
       }
     }
   }

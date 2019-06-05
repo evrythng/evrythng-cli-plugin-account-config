@@ -30,6 +30,7 @@ const exportToFile = async (jsonFile, operatorScope) => {
     unknownProjects,
   } = accountConfig;
   fs.writeFileSync(jsonFile, JSON.stringify(accountConfig, null, 2), 'utf8');
+  console.log(`\nWrote ${jsonFile}`);
 
   console.log(`\nExport summary:\n  ${projects.length} projects\n  ${applications.length} applications`);
   console.log(`  ${products.length} products\n  ${actionTypes.length} action types`);
