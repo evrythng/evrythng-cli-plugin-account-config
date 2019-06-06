@@ -6,6 +6,14 @@ const _export = require('../src/modules/export');
 const _import = require('../src/modules/import');
 const compare = require('../src/modules/compare');
 
+const {
+  testProjects,
+  testPermissions,
+  testRoles,
+  testCurrentAccount,
+  testOtherAccount,
+} = require('./testData');
+
 const DUMMY_API_KEY = '9'.repeat(80);
 
 /**
@@ -34,22 +42,14 @@ describe('evrythng-cli-plugin-account-config', () => {
 
     it('should map a project ID to project name', async () => {
       const id = 'UmSqCDt5BD8atKRRagdqUnAa';
-      const projects = [
-        { name: 'Project 1', id: 'UKpscG7ctXwDcMwwwF5EwKsh' },
-        { name: 'Project 2', id: 'UmSqCDt5BD8atKRRagdqUnAa' },
-      ];
 
-      expect(read.mapProjectName(projects, id)).to.equal(projects[1].name);
+      expect(read.mapProjectName(testProjects, id)).to.equal(testProjects[1].name);
     });
 
     it('should map unknown project ID to same ID', async () => {
-      const id = 'UmSqCDt5BD8atKRRagdqUnAa';
-      const projects = [{
-        name: 'Project 1',
-        id: 'UKpscG7ctXwDcMwwwF5EwKsh',
-      }];
+      const id = 'unknownId';
 
-      expect(read.mapProjectName(projects, id)).to.equal(id);
+      expect(read.mapProjectName(testProjects, id)).to.equal(id);
     });
 
     it('should request all resources of a type', async () => {
@@ -76,36 +76,27 @@ describe('evrythng-cli-plugin-account-config', () => {
     });
 
     it('should request all applications for a project', async () => {
-      const projects = [
-        { name: 'Project 1', id: 'UKpscG7ctXwDcMwwwF5EwKsh' },
-        { name: 'Project 2', id: 'UmSqCDt5BD8atKRRagdqUnAa' },
-      ];
-
       mockApi()
-        .get(`/projects/${projects[0].id}/applications?perPage=100&withScopes=true`)
+        .get(`/projects/${testProjects[0].id}/applications?perPage=100&withScopes=true`)
         .reply(200, []);
       mockApi()
-        .get(`/projects/${projects[1].id}/applications?perPage=100&withScopes=true`)
+        .get(`/projects/${testProjects[1].id}/applications?perPage=100&withScopes=true`)
         .reply(200, []);
 
-      const res = await read.getProjectApplications(scope, projects, projects[0]);
+      const res = await read.getProjectApplications(scope, testProjects, testProjects[0]);
       expect(res).to.be.an('array');
     });
 
     it('should request all applications for some projects', async () => {
-      const projects = [
-        { name: 'Project 1', id: 'UKpscG7ctXwDcMwwwF5EwKsh' },
-        { name: 'Project 2', id: 'UmSqCDt5BD8atKRRagdqUnAa' },
-      ];
 
       mockApi()
-        .get(`/projects/${projects[0].id}/applications?perPage=100&withScopes=true`)
+        .get(`/projects/${testProjects[0].id}/applications?perPage=100&withScopes=true`)
         .reply(200, []);
       mockApi()
-        .get(`/projects/${projects[1].id}/applications?perPage=100&withScopes=true`)
+        .get(`/projects/${testProjects[1].id}/applications?perPage=100&withScopes=true`)
         .reply(200, []);
 
-      const res = await read.getAllApplications(scope, projects);
+      const res = await read.getAllApplications(scope, testProjects);
       expect(res).to.be.an('array');
     });
 
@@ -166,12 +157,7 @@ describe('evrythng-cli-plugin-account-config', () => {
     });
 
     it('should map project name to known ID', async () => {
-      const projects = [
-        { name: 'Project 1', id: 'UKpscG7ctXwDcMwwwF5EwKsh' },
-        { name: 'Project 2', id: 'UmSqCDt5BD8atKRRagdqUnAa' },
-      ];
-
-      expect(_import.mapProjectNameToId(projects, 'Project 2'));
+      expect(_import.mapProjectNameToId(testProjects, 'Project 2'));
     });
 
     it('should build a creation task', async () => {
@@ -244,10 +230,6 @@ describe('evrythng-cli-plugin-account-config', () => {
     });
 
     it('should import applications', async () => {
-      const projects = [
-        { name: 'Project 1', id: 'UKpscG7ctXwDcMwwwF5EwKsh' },
-        { name: 'Project 2', id: 'UmSqCDt5BD8atKRRagdqUnAa' },
-      ];
       const applications = [
         { name: 'App 1', scopes: { projects: ['Project 2'] } },
       ];
@@ -256,45 +238,15 @@ describe('evrythng-cli-plugin-account-config', () => {
         .post('/projects/UmSqCDt5BD8atKRRagdqUnAa/applications', applications[0])
         .reply(201, {});
 
-      const res = await _import.importApplications(scope, applications, projects);
+      const res = await _import.importApplications(scope, applications, testProjects);
       expect(res).to.be.an('array');
     });
 
     it('should build an Operator permissions task', async () => {
-      const permissions = [{
-        name: 'global_read',
-        enabled: false,
-        projectScoped: false,
-        children: [{
-          name: 'gl_resource_update',
-          enabled: false,
-          projectScoped: false,
-        }, {
-          name: 'gl_project_update',
-          enabled: false,
-          projectScoped: false,
-        }],
-      }, {
-        name: 'project_read',
-        enabled: false,
-        projectScoped: true,
-        projects: [],
-        children: [{
-          name: 'project_update',
-          enabled: false,
-          projectScoped: true,
-          projects: [],
-        }, {
-          name: 'project_resource_update',
-          enabled: false,
-          projectScoped: true,
-          projects: [],
-        }],
-      }];
-      const task = _import.buildOperatorPermissionsTask(scope, 'foo', permissions);
+      const task = _import.buildOperatorPermissionsTask(scope, 'foo', testPermissions);
       expect(task).to.be.a('function');
 
-      for (const p of permissions) {
+      for (const p of testPermissions) {
         mockApi().put(`/roles/foo/permissions/${p.name}`, p).reply(200, []);
 
         for (const c of p.children) {
@@ -306,54 +258,11 @@ describe('evrythng-cli-plugin-account-config', () => {
     });
 
     it('should import role permissions', async () => {
-      const roles = [{
-        id: 'appUserRoleId',
-        name: 'app user role',
-        version: 2,
-        type: 'userInApp',
-        permissions: [
-          { access: 'cru', path: '/thngs' },
-          { access: 'c', path: '/products' },
-        ],
-      }, {
-        id: 'operatorRoleId',
-        name: 'operator role',
-        permissions: [{
-          name: 'global_read',
-          enabled: false,
-          projectScoped: false,
-          children: [{
-            name: 'gl_resource_update',
-            enabled: false,
-            projectScoped: false,
-          }, {
-            name: 'gl_project_update',
-            enabled: false,
-            projectScoped: false,
-          }],
-        }, {
-          name: 'project_read',
-          enabled: false,
-          projectScoped: true,
-          projects: [],
-          children: [{
-            name: 'project_update',
-            enabled: false,
-            projectScoped: true,
-            projects: [],
-          }, {
-            name: 'project_resource_update',
-            enabled: false,
-            projectScoped: true,
-            projects: [],
-          }],
-        }],
-      }];
-      const originalRoles = JSON.parse(JSON.stringify(roles));
+      const originalRoles = JSON.parse(JSON.stringify(testRoles));
 
-      mockApi().put('/roles/appUserRoleId/permissions', roles[0].permissions).reply(200, []);
+      mockApi().put('/roles/appUserRoleId/permissions', testRoles[0].permissions).reply(200, []);
 
-      for (const p of roles[1].permissions) {
+      for (const p of testRoles[1].permissions) {
         mockApi().put(`/roles/operatorRoleId/permissions/${p.name}`, p).reply(200, []);
 
         for (const c of p.children) {
@@ -361,7 +270,7 @@ describe('evrythng-cli-plugin-account-config', () => {
         }
       }
 
-      const res = await _import.importRolePermissions(scope, roles, originalRoles);
+      const res = await _import.importRolePermissions(scope, testRoles, originalRoles);
       expect(res).to.be.an('array');
     });
   });
@@ -369,6 +278,31 @@ describe('evrythng-cli-plugin-account-config', () => {
   describe('compare', () => {
     it('should export compareAccounts method', async () => {
       expect(compare.compareAccounts).to.be.a('function');
+    });
+
+    it('should compare a given type of resources', async () => {
+      const diffType = compare.diffType(testCurrentAccount, testOtherAccount, 'roles');
+
+      expect(diffType).to.be.an('array');
+      expect(diffType).to.have.length(2);
+    });
+
+    it('should generate diff of two accounts', async () => {
+      const diff = compare.generateObjectDiff(testCurrentAccount, testOtherAccount);
+
+      expect(diff).to.be.an('object');
+      expect(diff.projects).to.be.an('array');
+      expect(diff.projects).to.have.length(1);
+      expect(diff.applications).to.be.an('array');
+      expect(diff.applications).to.have.length(1);
+      expect(diff.places).to.be.an('array');
+      expect(diff.places).to.have.length(0);
+      expect(diff.actionTypes).to.be.an('array');
+      expect(diff.actionTypes).to.have.length(2);
+      expect(diff.products).to.be.an('array');
+      expect(diff.products).to.have.length(0);
+      expect(diff.roles).to.be.an('array');
+      expect(diff.roles).to.have.length(2);
     });
   });
 });

@@ -32,6 +32,23 @@ const diffType = (currentAccount, otherAccount, type) => currentAccount[type].fi
 });
 
 /**
+ * Determine all resources that exist in curent account, but NOT in other account.
+ * Intent is to update the other account to how this one (a test account?) is set up.
+ *
+ * @param {object} currentAccount - Currently selected Operator account.
+ * @param {object} otherAccount - Other specified Operator account.
+ * @returns {object} Object containing only resources not on otherAccount.
+ */
+const generateObjectDiff = (currentAccount, otherAccount) => ({
+  projects: diffType(currentAccount, otherAccount, 'projects'),
+  applications: diffType(currentAccount, otherAccount, 'applications'),
+  products: diffType(currentAccount, otherAccount, 'products'),
+  actionTypes: diffType(currentAccount, otherAccount, 'actionTypes'),
+  places: diffType(currentAccount, otherAccount, 'places'),
+  roles: diffType(currentAccount, otherAccount, 'roles'),
+});
+
+/**
  * Read two accounts, and compare all resources by name.
  *
  * @param {object} currentScope - Currently selected Operator scope.
@@ -43,17 +60,7 @@ const compareAccounts = async (currentScope, otherScope) => {
   console.log('\nReading other account...');
   const otherAccount = await readAccount(otherScope);
 
-  // Determine all resources that exist in curent account, but NOT in other account.
-  // Intent is to update the other account to how this one (a test account?) is set up.
-  const diff = {
-    projects: diffType(currentAccount, otherAccount, 'projects'),
-    applications: diffType(currentAccount, otherAccount, 'applications'),
-    products: diffType(currentAccount, otherAccount, 'products'),
-    actionTypes: diffType(currentAccount, otherAccount, 'actionTypes'),
-    places: diffType(currentAccount, otherAccount, 'places'),
-    roles: diffType(currentAccount, otherAccount, 'roles'),
-  };
-
+  const diff = generateObjectDiff(currentAccount, otherAccount);
   console.log('\nOther account is missing:');
   Object.entries(diff).forEach(([key, value]) => console.log(`  ${value.length} ${key}`));
 
@@ -64,4 +71,6 @@ const compareAccounts = async (currentScope, otherScope) => {
 
 module.exports = {
   compareAccounts,
+  diffType,
+  generateObjectDiff,
 };
