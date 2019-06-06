@@ -72,7 +72,7 @@ const mapProjectNameToId = (projects, name) => {
  * @returns {function} Function that returns the creation task promise.
  */
 const buildCreateTask = (parent, payload, type) => async () => {
-  const res = await pRetry(async () => parent[type]().create(payload), { retries: 5});
+  const res = await pRetry(async () => parent[type]().create(payload), { retries: 1 });
 
   // Scope update not needed or supported
   if (NO_SCOPES.includes(type)) {
@@ -81,7 +81,7 @@ const buildCreateTask = (parent, payload, type) => async () => {
 
   // Rescope using resolved scopes
   const updatePayload = { scopes: payload.scopes };
-  return pRetry(async () => parent[type](res.id).update(updatePayload), { retries: 5 });
+  return pRetry(async () => parent[type](res.id).update(updatePayload), { retries: 1 });
 };
 
 /**
@@ -253,4 +253,8 @@ const importFromFile = async (jsonFile, operator) => {
 
 module.exports = {
   importFromFile,
+  validateAccountConfig,
+  mapProjectNameToId,
+  buildCreateTask,
+  buildUpdateTask,
 };
