@@ -34,11 +34,11 @@ Export resources listed above to `jsonFile`.
 
 ### `import $jsonFile`
 
-Import resources listen above from `jsonFile`, if it is valid according to
+Import resources listed above from `jsonFile`, if it is valid according to
 `data/account-config.schema.json`.
 
 
-### `compare $jsonFile --api-key $OTHER_API_KEY`
+### `compare $jsonFile --api-key $OTHER_ACCOUNT_API_KEY`
 
 Compare resources in current account selected with `operators $name use` with
 some other account selected with the `--api-key` switch. A file `diff.json` is
