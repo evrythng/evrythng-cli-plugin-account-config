@@ -35,7 +35,7 @@ describe('evrythng-cli-plugin-account-config', () => {
     scope = new evrythng.Operator(DUMMY_API_KEY);
   });
 
-  describe('read', () => {
+  describe('read.js', () => {
     it('should export readAccount method', async () => {
       expect(read.readAccount).to.be.a('function');
     });
@@ -123,13 +123,13 @@ describe('evrythng-cli-plugin-account-config', () => {
     });
   });
 
-  describe('export', () => {
+  describe('export.js', () => {
     it('should export exportToFile method', async () => {
       expect(_export.exportToFile).to.be.a('function');
     });
   });
 
-  describe('import', () => {
+  describe('import.js', () => {
     it('should export importFromFile method', async () => {
       expect(_import.importFromFile).to.be.a('function');
     });
@@ -157,7 +157,13 @@ describe('evrythng-cli-plugin-account-config', () => {
     });
 
     it('should map project name to known ID', async () => {
-      expect(_import.mapProjectNameToId(testProjects, 'Project 2'));
+      const result = _import.mapProjectNameToId(testProjects, 'Project 2');
+      expect(result).to.equal('UmSqCDt5BD8atKRRagdqUnAa');
+    });
+
+    it('should throw for unknown project name', async () => {
+      const attempt = () => _import.mapProjectNameToId(testProjects, 'Project Unknown');
+      expect(attempt).to.throw();
     });
 
     it('should build a creation task', async () => {
@@ -229,6 +235,28 @@ describe('evrythng-cli-plugin-account-config', () => {
       expect(res).to.be.an('array');
     });
 
+    it('should import some resources with scopes', async () => {
+      const resources = [{
+        name: 'Product 1',
+        scopes: { projects: ['Project 2'] },
+      }];
+
+      mockApi()
+        .post('/products', resources[0])
+        .reply(201, { id: 'foo' });
+      mockApi()
+        .put('/products/foo', {
+          scopes: {
+            projects: ['UmSqCDt5BD8atKRRagdqUnAa'],
+            users: [],
+          },
+        })
+        .reply(200, {});
+
+      const res = await _import.importResources(scope, resources, 'product', testProjects);
+      expect(res).to.be.an('array');
+    });
+
     it('should import applications', async () => {
       const applications = [
         { name: 'App 1', scopes: { projects: ['Project 2'] } },
@@ -275,7 +303,7 @@ describe('evrythng-cli-plugin-account-config', () => {
     });
   });
 
-  describe('compare', () => {
+  describe('compare.js', () => {
     it('should export compareAccounts method', async () => {
       expect(compare.compareAccounts).to.be.a('function');
     });
@@ -285,6 +313,34 @@ describe('evrythng-cli-plugin-account-config', () => {
 
       expect(diffType).to.be.an('array');
       expect(diffType).to.have.length(2);
+    });
+
+    it('should compare role permissions', async () => {
+      const current = {
+        roles: [{
+          name: 'role 1',
+          version: 2,
+          type: 'userInApp',
+          permissions: [
+            { access: 'cru', path: '/thngs' },
+            { access: 'c', path: '/products' },
+          ],
+        }],
+      };
+      const other = {
+        roles: [{
+          name: 'role 1',
+          version: 2,
+          type: 'userInApp',
+          permissions: [
+            { access: 'cru', path: '/thngs' },
+          ],
+        }],
+      };
+      const diffType = compare.diffType(current, other, 'roles');
+
+      expect(diffType).to.be.an('array');
+      expect(diffType).to.have.length(1);
     });
 
     it('should generate diff of two accounts', async () => {

@@ -6,7 +6,7 @@
   "author": "EVRYTHNG",
   "license": "Apache-2.0",
   "scripts": {
-    "test": "mocha ./tests/index.spec.js"
+    "test": "nyc mocha ./tests/index.spec.js"
   },
   "repository": {
     "type": "git",
@@ -21,6 +21,19 @@
   "devDependencies": {
     "chai": "^4.2.0",
     "mocha": "^6.1.4",
-    "nock": "^10.0.6"
+    "nock": "^10.0.6",
+    "nyc": "^14.1.1"
+  },
+  "nyc": {
+    "exclude": [
+      "tests/*"
+    ],
+    "reporter": [
+      "cobertura",
+      "html",
+      "lcov",
+      "text-summary"
+    ],
+    "report-dir": "./reports"
   }
 }
