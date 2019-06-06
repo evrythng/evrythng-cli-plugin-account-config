@@ -5,6 +5,7 @@
 
 const { validate } = require('jsonschema');
 const fs = require('fs');
+const pRetry = require('p-retry');
 
 let operator;
 let projects;
@@ -73,7 +74,7 @@ const mapProjectNameToId = (name) => {
  * @returns {function} Function that returns the creation task promise.
  */
 const buildCreateTask = (parent, payload, type) => async () => {
-  const res = await parent[type]().create(payload);
+  const res = await pRetry(async () => parent[type]().create(payload), { retries: 5});
 
   // Scope update not needed or supported
   if (NO_SCOPES.includes(type)) {
@@ -82,7 +83,7 @@ const buildCreateTask = (parent, payload, type) => async () => {
 
   // Rescope using resolved scopes
   const updatePayload = { scopes: payload.scopes };
-  return parent[type](res.id).update(updatePayload);
+  return pRetry(async () => parent[type](res.id).update(updatePayload), { retries: 5 });
 };
 
 /**
@@ -100,7 +101,7 @@ const buildUpdateTask = (parent, payload, type) => async () => parent[type]().up
 const runTypeTasks = async (tasks, type) => {
   const results = [];
   let errored = false;
-  
+
   for (const task of tasks) {
     printProgress(`Importing ${type}s`, tasks.indexOf(task), tasks.length);
     try {

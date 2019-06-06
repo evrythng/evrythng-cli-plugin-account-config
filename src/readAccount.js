@@ -46,25 +46,6 @@ const mapProjectName = (id) => {
   return found.name;
 };
 
-const iterateResourceType = async (parent, type, mapProjectIds) => {
-  const it = parent[type]().setPerPage(100).setWithScopes().pages();
-  const result = [];
-
-  let page;
-  while (!(page = await it.next()).done) {
-    page.value.forEach((item) => {
-      // Map project IDs to names
-      if (mapProjectIds && item.scopes && item.scopes.projects) {
-        item.scopes.projects = item.scopes.projects.map(mapProjectName);
-      }
-
-      result.push(item);
-    });
-  }
-
-  return result;
-};
-
 /**
  * Get all resources for a given type, mapping project IDs if required.
  *
@@ -74,12 +55,29 @@ const iterateResourceType = async (parent, type, mapProjectIds) => {
  * @param {boolean} [report] - If true, report which resource is being read.
  * @returns {object[]} Array of read resources.
  */
-const getAllResources = async (parent, type, mapProjectIds = true, report = true) => {
+const getAllResources = (parent, type, mapProjectIds = true, report = true) => {
   if (report) {
     console.log(`Reading all ${type}s...`);
   }
 
-  return pRetry(async () => iterateResourceType(parent, type, mapProjectIds), { retries: 5 });
+  return pRetry(async () => {
+    const it = parent[type]().setPerPage(100).setWithScopes().pages();
+    const result = [];
+
+    let page;
+    while (!(page = await it.next()).done) {
+      page.value.forEach((item) => {
+        // Map project IDs to names
+        if (mapProjectIds && item.scopes && item.scopes.projects) {
+          item.scopes.projects = item.scopes.projects.map(mapProjectName);
+        }
+
+        result.push(item);
+      });
+    }
+
+    return result;
+  }, { retries: 5 });
 };
 
 /**
