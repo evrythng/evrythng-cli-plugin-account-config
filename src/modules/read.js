@@ -5,7 +5,6 @@
 
 const pRetry = require('p-retry');
 
-let operator;
 let unknownProjects = [];
 
 /** The default roles in every account */
@@ -84,23 +83,25 @@ const getAllResources = (parent, type, projects, mapProjectIds = true, report = 
 /**
  * Get all applications for a given project.
  *
+ * @param {object} operator - Operator scope to use.
  * @param {object[]} projects - The projects to search.
  * @param {object} p - Project to use.
  * @returns {Promise} Promise that resolves to an array of applications.
  */
-const getProjectApplications = (projects, p) =>
+const getProjectApplications = (operator, projects, p) =>
   getAllResources(operator.project(p.id), 'application', projects, true, false);
 
 /**
  * For each project, read all applications and append name scopes.
  *
+ * @param {object} operator - Operator scope to use.
  * @param {object[]} projects - The projects to use.
  * @returns {Promise} Promise that resolves to all the applications.
  */
-const getAllApplications = async projects => {
+const getAllApplications = async (operator, projects) => {
   console.log('Reading all applications...');
 
-  const res = await Promise.all(projects.map(p => getProjectApplications(projects, p)));
+  const res = await Promise.all(projects.map(p => getProjectApplications(operator, projects, p)));
   return res.reduce((result, item) => result.concat(item), []);
 };
 
@@ -108,10 +109,11 @@ const getAllApplications = async projects => {
  * For each role, read all permissions.
  * As a special case, each is annotated with a 'roleName' property to enable import.
  *
+ * @param {object} operator - Operator scope to use.
  * @param {object[]} roles - The roles to use.
  * @returns {Promise} Promise that resolves to an array of role permission sets
  */
-const getAllRolePermissions = async (roles) => {
+const getAllRolePermissions = async (operator, roles) => {
   console.log('Reading all role permissions...');
 
   for (const role of roles) {
@@ -122,21 +124,19 @@ const getAllRolePermissions = async (roles) => {
 /**
  * Read all the required resources in an account.
  *
- * @param {object} operatorScope - Operator scope to use.
+ * @param {object} operator - Operator scope to use.
  * @returns {Promise} Promise resolving to an bject containing the resources.
  */
-const readAccount = async (operatorScope) => {
-  operator = operatorScope;
-
+const readAccount = async (operator) => {
   const projects = await getAllResources(operator, 'project', null, false);
-  const applications = await getAllApplications(projects);
+  const applications = await getAllApplications(operator, projects);
   const products = await getAllResources(operator, 'product', projects);
   const actionTypes = await getAllResources(operator, 'actionType', projects)
     .then(res => res.filter(p => !DEFAULT_ACTION_TYPES.includes(p.name)));
   const places = await getAllResources(operator, 'place', projects);
   const roles = await getAllResources(operator, 'role', projects)
     .then(res => res.filter(p => !DEFAULT_ROLES.includes(p.name)));
-  await getAllRolePermissions(roles);
+  await getAllRolePermissions(operator, roles);
 
   return {
     projects,
@@ -153,4 +153,7 @@ module.exports = {
   readAccount,
   mapProjectName,
   getAllResources,
+  getProjectApplications,
+  getAllApplications,
+  getAllRolePermissions,
 };
