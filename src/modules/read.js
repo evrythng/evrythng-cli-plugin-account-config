@@ -107,7 +107,6 @@ const getAllApplications = async (operator, projects) => {
 
 /**
  * For each role, read all permissions.
- * As a special case, each is annotated with a 'roleName' property to enable import.
  *
  * @param {object} operator - Operator scope to use.
  * @param {object[]} roles - The roles to use.

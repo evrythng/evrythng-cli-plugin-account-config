@@ -4,9 +4,9 @@
  */
 
 const evrythng = require('evrythng');
-const { exportToFile } = require('./export');
-const { importFromFile } = require('./import');
-const { compareAccounts } = require('./compare');
+const { exportToFile } = require('./modules/export');
+const { importFromFile } = require('./modules/import');
+const { compareAccounts } = require('./modules/compare');
 
 let cli;
 
