@@ -29,7 +29,7 @@ operations:
 
 ### Export Resources
 
-Export resources listed above to `jsonFile`.
+Export resources listed above to `jsonFile` (such as `./export.json`).
 
 ```
 $ evrythng account-config export $jsonFile
@@ -55,5 +55,5 @@ created containing all those found in the selected account but which do **not**
 appear in the other account (by `name`).
 
 ```
-$ evrythng account-config compare $jsonFile --api-key $OTHER_ACCOUNT_API_KEY
+$ evrythng account-config compare --api-key $OTHER_ACCOUNT_API_KEY
 ```
