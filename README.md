@@ -27,20 +27,33 @@ Once installed, the `account-config` command set is added, including three new
 operations:
 
 
-### `export $jsonFile`
+### Export Resources
 
 Export resources listed above to `jsonFile`.
 
-
-### `import $jsonFile`
-
-Import resources listed above from `jsonFile`, if it is valid according to
-`data/account-config.schema.json`.
+```
+$ evrythng account-config export $jsonFile
+```
 
 
-### `compare $jsonFile --api-key $OTHER_ACCOUNT_API_KEY`
+### Import Resources
+
+Import resources listed above from `jsonFile` into the currently selected
+account, if it is valid according to `data/account-config.schema.json`.
+Resources are always created, even if they may be considered to already exist.
+
+```
+$ evrythng account-config import $jsonFile
+```
+
+
+### Compare Accounts
 
 Compare resources in current account selected with `operators $name use` with
 some other account selected with the `--api-key` switch. A file `diff.json` is
 created containing all those found in the selected account but which do **not**
 appear in the other account (by `name`).
+
+```
+$ evrythng account-config compare $jsonFile --api-key $OTHER_ACCOUNT_API_KEY
+```
