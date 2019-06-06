@@ -3,6 +3,7 @@
  * All rights reserved. Use of this material is subject to license.
  */
 
+const _ = require('lodash');
 const fs = require('fs');
 const readAccount = require('./readAccount');
 
@@ -17,31 +18,17 @@ const DIFF_PATH = `${__dirname}/../diff.json`;
  * @param {string} type - The type of resources to compare.
  * @returns {object[]} List of items that are not in other account.
  */
-const findMissing = (currentAccount, otherAccount, type) => currentAccount[type].filter((item) => {
-  if (type !== 'rolePermissions') {
-    return !otherAccount[type].find(p => p.name === item.name);
+const diffType = (currentAccount, otherAccount, type) => currentAccount[type].filter((item) => {
+  const otherItem = otherAccount[type].find(p => p.name === item.name);
+  if (!otherItem) {
+    return true;
   }
 
-  // permissions are arrays (but still associated with a named role...)
-  // For each permission in current
-  return currentAccount.rolePermissions.filter((item) => {
-  //   get the name of the role
-    const { roleName } = item.find(p => p.roleName);
-  //   if the role exists in other, compare the permissions in other
-    const otherRole = otherAccount.roles.find(p => p.name === roleName);
-    if (otherRole) {
-      const otherPermissions = otherAccount.rolePermissions.find(p => 
-        p.find(q => q.roleName && q.roleName === roleName));
+  if (type !== 'roles') {
+    return !otherItem;
+  }
 
-      console.log(item);
-      console.log(otherPermissions);
-      process.exit()
-
-      return !otherPermissions.every(p => item.includes(p));
-    } else {
-  //   if not, wthh?
-    }
-  });
+  return !_.isEqual(otherItem.permissions, item.permissions);
 });
 
 /**
@@ -59,13 +46,12 @@ const compareAccounts = async (currentScope, otherScope) => {
   // Determine all resources that exist in curent account, but NOT in other account.
   // Intent is to update the other account to how this one (a test account?) is set up.
   const diff = {
-    projects: findMissing(currentAccount, otherAccount, 'projects'),
-    applications: findMissing(currentAccount, otherAccount, 'applications'),
-    products: findMissing(currentAccount, otherAccount, 'products'),
-    actionTypes: findMissing(currentAccount, otherAccount, 'actionTypes'),
-    places: findMissing(currentAccount, otherAccount, 'places'),
-    roles: findMissing(currentAccount, otherAccount, 'roles'),
-    rolePermissions: findMissing(currentAccount, otherAccount, 'rolePermissions'),
+    projects: diffType(currentAccount, otherAccount, 'projects'),
+    applications: diffType(currentAccount, otherAccount, 'applications'),
+    products: diffType(currentAccount, otherAccount, 'products'),
+    actionTypes: diffType(currentAccount, otherAccount, 'actionTypes'),
+    places: diffType(currentAccount, otherAccount, 'places'),
+    roles: diffType(currentAccount, otherAccount, 'roles'),
   };
 
   console.log('\nOther account is missing:');

@@ -108,11 +108,9 @@ const getAllApplications = async projects => {
 const getAllRolePermissions = async (roles) => {
   console.log('Reading all role permissions...');
 
-  return Promise.all(roles.map(async (p) => {
-    const permissions = await operator.role(p.id).permission().read();
-    permissions.push({ roleName: p.name });
-    return permissions;
-  }));
+  for (const role of roles) {
+    role.permissions = await operator.role(role.id).permission().read();
+  }
 };
 
 /**
@@ -132,9 +130,7 @@ const readAccount = async (operatorScope) => {
   const places = await getAllResources(operator, 'place');
   const roles = await getAllResources(operator, 'role')
     .then(res => res.filter(p => !DEFAULT_ROLES.includes(p.name)));
-
-  // Followups
-  const rolePermissions = await getAllRolePermissions(roles);
+  await getAllRolePermissions(roles);
 
   return {
     projects,
@@ -143,7 +139,6 @@ const readAccount = async (operatorScope) => {
     actionTypes,
     places,
     roles,
-    rolePermissions,
     unknownProjects,
   };
 };

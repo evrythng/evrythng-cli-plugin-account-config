@@ -25,7 +25,6 @@ const exportToFile = async (jsonFile, operatorScope) => {
     actionTypes,
     places,
     roles,
-    rolePermissions,
 
     unknownProjects,
   } = accountConfig;
@@ -34,7 +33,7 @@ const exportToFile = async (jsonFile, operatorScope) => {
 
   console.log(`\nExport summary:\n  ${projects.length} projects\n  ${applications.length} applications`);
   console.log(`  ${products.length} products\n  ${actionTypes.length} action types`);
-  console.log(`  ${places.length} places\n  ${roles.length} roles\n  ${rolePermissions.length} role permissions`);
+  console.log(`  ${places.length} places\n  ${roles.length} roles`);
 
   if (unknownProjects.length) {
     console.log(`\nUnknown projects:\n${JSON.stringify(unknownProjects)}`);
