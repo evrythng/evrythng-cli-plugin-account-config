@@ -3,6 +3,8 @@
  * All rights reserved. Use of this material is subject to license.
  */
 
+const pRetry = require('p-retry');
+
 let operator;
 let projects;
 let unknownProjects = [];
@@ -44,20 +46,7 @@ const mapProjectName = (id) => {
   return found.name;
 };
 
-/**
- * Get all resources for a given type, mapping project IDs if required.
- *
- * @param {object} parent - This resource type's parent type or scope.
- * @param {string} type - Resource type as property of scope.
- * @param {boolean} [mapProjectIds] - If true, attempt to map project IDs to name.
- * @param {boolean} [report] - If true, report which resource is being read.
- * @returns {object[]} Array of read resources.
- */
-const getAllResources = async (parent, type, mapProjectIds = true, report = true) => {
-  if (report) {
-    console.log(`Reading all ${type}s...`);
-  }
-
+const iterateResourceType = async (parent, type, mapProjectIds) => {
   const it = parent[type]().setPerPage(100).setWithScopes().pages();
   const result = [];
 
@@ -74,6 +63,23 @@ const getAllResources = async (parent, type, mapProjectIds = true, report = true
   }
 
   return result;
+};
+
+/**
+ * Get all resources for a given type, mapping project IDs if required.
+ *
+ * @param {object} parent - This resource type's parent type or scope.
+ * @param {string} type - Resource type as property of scope.
+ * @param {boolean} [mapProjectIds] - If true, attempt to map project IDs to name.
+ * @param {boolean} [report] - If true, report which resource is being read.
+ * @returns {object[]} Array of read resources.
+ */
+const getAllResources = async (parent, type, mapProjectIds = true, report = true) => {
+  if (report) {
+    console.log(`Reading all ${type}s...`);
+  }
+
+  return pRetry(async () => iterateResourceType(parent, type, mapProjectIds), { retries: 5 });
 };
 
 /**

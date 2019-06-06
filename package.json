@@ -12,6 +12,7 @@
   "dependencies": {
     "evrythng": "^5.1.0",
     "jsonschema": "^1.2.4",
-    "lodash": "^4.17.11"
+    "lodash": "^4.17.11",
+    "p-retry": "^4.1.0"
   }
 }
