@@ -12,7 +12,7 @@ let projects;
 let roles;
 
 /** The account configuration file schema. */
-const SCHEMA = require('../data/account-config.schema.json');
+const SCHEMA = require('../../data/account-config.schema.json');
 /** Resource types that don't require scope updates. */
 const NO_SCOPES = ['project', 'application'];
 
@@ -212,4 +212,6 @@ const importFromFile = async (jsonFile, operatorScope) => {
   console.log('\nImport complete!');
 };
 
-module.exports = importFromFile;
+module.exports = {
+  importFromFile,
+};

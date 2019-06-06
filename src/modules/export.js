@@ -4,7 +4,7 @@
  */
 
 const fs = require('fs');
-const readAccount = require('./readAccount');
+const { readAccount } = require('./read');
 
 /**
  * Export all account resources of selected types to a JSON file.
@@ -40,4 +40,6 @@ const exportToFile = async (jsonFile, operatorScope) => {
   }
 };
 
-module.exports = exportToFile;
+module.exports = {
+  exportToFile,
+};

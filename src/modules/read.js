@@ -6,7 +6,6 @@
 const pRetry = require('p-retry');
 
 let operator;
-let projects;
 let unknownProjects = [];
 
 /** The default roles in every account */
@@ -30,11 +29,12 @@ const DEFAULT_ACTION_TYPES = [
 /**
  * Map a project ID to a known project name, or else leave as is.
  *
+ * @param {object[]} projects - The projects to search.
  * @param {string} id - The project ID to map.
  * @returns {string} The project name if known, or else the unchanged ID.
  */
-const mapProjectName = (id) => {
-  const found = projects.find(project => project.id === id);
+const mapProjectName = (projects, id) => {
+  const found = projects.find(p => p.id === id);
   if (!found) {
     if (!unknownProjects.includes(id) && id !== 'all') {
       unknownProjects.push(id);
@@ -51,11 +51,12 @@ const mapProjectName = (id) => {
  *
  * @param {object} parent - This resource type's parent type or scope.
  * @param {string} type - Resource type as property of scope.
+ * @param {object[]} projects - Projects to search if mapProjectIds is set.
  * @param {boolean} [mapProjectIds] - If true, attempt to map project IDs to name.
  * @param {boolean} [report] - If true, report which resource is being read.
  * @returns {object[]} Array of read resources.
  */
-const getAllResources = (parent, type, mapProjectIds = true, report = true) => {
+const getAllResources = (parent, type, projects, mapProjectIds = true, report = true) => {
   if (report) {
     console.log(`Reading all ${type}s...`);
   }
@@ -69,7 +70,7 @@ const getAllResources = (parent, type, mapProjectIds = true, report = true) => {
       page.value.forEach((item) => {
         // Map project IDs to names
         if (mapProjectIds && item.scopes && item.scopes.projects) {
-          item.scopes.projects = item.scopes.projects.map(mapProjectName);
+          item.scopes.projects = item.scopes.projects.map(p => mapProjectName(projects, p));
         }
 
         result.push(item);
@@ -83,11 +84,12 @@ const getAllResources = (parent, type, mapProjectIds = true, report = true) => {
 /**
  * Get all applications for a given project.
  *
- * @param {object} project - Project to use.
+ * @param {object[]} projects - The projects to search.
+ * @param {object} p - Project to use.
  * @returns {Promise} Promise that resolves to an array of applications.
  */
-const getProjectApplications = project =>
-  getAllResources(operator.project(project.id), 'application', true, false);
+const getProjectApplications = (projects, p) =>
+  getAllResources(operator.project(p.id), 'application', projects, true, false);
 
 /**
  * For each project, read all applications and append name scopes.
@@ -98,7 +100,7 @@ const getProjectApplications = project =>
 const getAllApplications = async projects => {
   console.log('Reading all applications...');
 
-  const res = await Promise.all(projects.map(getProjectApplications));
+  const res = await Promise.all(projects.map(p => getProjectApplications(projects, p)));
   return res.reduce((result, item) => result.concat(item), []);
 };
 
@@ -126,13 +128,13 @@ const getAllRolePermissions = async (roles) => {
 const readAccount = async (operatorScope) => {
   operator = operatorScope;
 
-  projects = await getAllResources(operator, 'project', false);
+  const projects = await getAllResources(operator, 'project', null, false);
   const applications = await getAllApplications(projects);
-  const products = await getAllResources(operator, 'product');
-  const actionTypes = await getAllResources(operator, 'actionType')
+  const products = await getAllResources(operator, 'product', projects);
+  const actionTypes = await getAllResources(operator, 'actionType', projects)
     .then(res => res.filter(p => !DEFAULT_ACTION_TYPES.includes(p.name)));
-  const places = await getAllResources(operator, 'place');
-  const roles = await getAllResources(operator, 'role')
+  const places = await getAllResources(operator, 'place', projects);
+  const roles = await getAllResources(operator, 'role', projects)
     .then(res => res.filter(p => !DEFAULT_ROLES.includes(p.name)));
   await getAllRolePermissions(roles);
 
@@ -147,4 +149,8 @@ const readAccount = async (operatorScope) => {
   };
 };
 
-module.exports = readAccount;
+module.exports = {
+  readAccount,
+  mapProjectName,
+  getAllResources,
+};

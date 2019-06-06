@@ -5,7 +5,7 @@
 
 const _ = require('lodash');
 const fs = require('fs');
-const readAccount = require('./readAccount');
+const { readAccount } = require('./read');
 
 /** Path to the diff file. */
 const DIFF_PATH = `${__dirname}/../diff.json`;
@@ -62,4 +62,6 @@ const compareAccounts = async (currentScope, otherScope) => {
   console.log('\nWrote diff.json\n');
 };
 
-module.exports = compareAccounts;
+module.exports = {
+  compareAccounts,
+};
