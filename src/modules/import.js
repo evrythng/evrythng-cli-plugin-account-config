@@ -72,7 +72,7 @@ const mapProjectNameToId = (projects, name) => {
  * @returns {function} Function that returns the creation task promise.
  */
 const buildCreateTask = (parent, payload, type) => async () => {
-  const res = await pRetry(async () => parent[type]().create(payload), { retries: 1 });
+  const res = await pRetry(async () => parent[type]().create(payload), { retries: 5 });
 
   // Scope update not needed or supported
   if (NO_SCOPES.includes(type)) {
@@ -81,7 +81,7 @@ const buildCreateTask = (parent, payload, type) => async () => {
 
   // Rescope using resolved scopes
   const updatePayload = { scopes: payload.scopes };
-  return pRetry(async () => parent[type](res.id).update(updatePayload), { retries: 1 });
+  return pRetry(async () => parent[type](res.id).update(updatePayload), { retries: 5 });
 };
 
 /**
@@ -169,7 +169,7 @@ const importApplications = async (operator, applications, projects) => {
  * @returns {Promise} Promise that resolves when all permissions are updated.
  */
 const buildOperatorPermissionsTask = (operator, roleId, permissions) => async () => {
-  const apply = (name, data) => evrythng.api({
+  const updatePermission = (name, data) => evrythng.api({
     url: `/roles/${roleId}/permissions/${name}`,
     apiKey: operator.apiKey,
     method: 'put',
@@ -177,10 +177,10 @@ const buildOperatorPermissionsTask = (operator, roleId, permissions) => async ()
   });
 
   for (const p of permissions) {
-    await apply(p.name, p);
+    await updatePermission(p.name, p);
 
     for (const c of p.children) {
-      await apply(c.name, c);
+      await updatePermission(c.name, c);
     }
   }
 };
@@ -257,4 +257,9 @@ module.exports = {
   mapProjectNameToId,
   buildCreateTask,
   buildUpdateTask,
+  runTypeTasks,
+  importResources,
+  importApplications,
+  buildOperatorPermissionsTask,
+  importRolePermissions,
 };

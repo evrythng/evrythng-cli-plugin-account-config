@@ -176,8 +176,8 @@ describe('evrythng-cli-plugin-account-config', () => {
 
     it('should build a creation task', async () => {
       const payload = { name: 'test', scopes: {} };
-      const task = _import.buildCreateTask(scope, payload, 'product');
 
+      const task = _import.buildCreateTask(scope, payload, 'product');
       expect(task).to.be.a('function');
 
       mockApi()
@@ -186,23 +186,183 @@ describe('evrythng-cli-plugin-account-config', () => {
       mockApi()
         .put('/products/foo', { scopes: {} })
         .reply(200, {});
-      const res = await task();
 
+      const res = await task();
       expect(res).to.be.an('object');
     });
 
     it('should build an update task', async () => {
       const payload = { name: 'test' };
       const task = _import.buildUpdateTask(scope, payload, 'product');
-
       expect(task).to.be.a('function');
 
       mockApi()
         .put('/products', payload)
         .reply(200, {});
-      const res = await task();
 
+      const res = await task();
       expect(res).to.be.an('object');
+    });
+
+    it('should run a series of tasks', async () => {
+      const payloads = [
+        { name: 'Product 1' },
+        { name: 'Product 2' },
+        { name: 'Product 3' },
+      ];
+      const tasks = payloads.map(p => _import.buildUpdateTask(scope, p, 'product'));
+
+      mockApi()
+        .put('/products', payloads[0])
+        .reply(200, { id: 'foo' })
+        .persist();
+      mockApi()
+        .put('/products', payloads[1])
+        .reply(200, { id: 'foo' })
+        .persist();
+      mockApi()
+        .put('/products', payloads[2])
+        .reply(200, { id: 'foo' })
+        .persist();
+
+      const res = await _import.runTypeTasks(tasks, 'product');
+      expect(res).to.be.an('array');
+    });
+
+    it('should import some resources', async () => {
+      const resources = [{ name: 'Product 1', scopes: {} }];
+
+      mockApi()
+        .post('/products', resources[0])
+        .reply(201, { id: 'foo' });
+      mockApi()
+        .put('/products/foo', { scopes: {} })
+        .reply(200, {});
+
+      const res = await _import.importResources(scope, resources, 'product', null, false);
+      expect(res).to.be.an('array');
+    });
+
+    it('should import applications', async () => {
+      const projects = [
+        { name: 'Project 1', id: 'UKpscG7ctXwDcMwwwF5EwKsh' },
+        { name: 'Project 2', id: 'UmSqCDt5BD8atKRRagdqUnAa' },
+      ];
+      const applications = [
+        { name: 'App 1', scopes: { projects: ['Project 2'] } },
+      ];
+
+      mockApi()
+        .post('/projects/UmSqCDt5BD8atKRRagdqUnAa/applications', applications[0])
+        .reply(201, {});
+
+      const res = await _import.importApplications(scope, applications, projects);
+      expect(res).to.be.an('array');
+    });
+
+    it('should build an Operator permissions task', async () => {
+      const permissions = [{
+        name: 'global_read',
+        enabled: false,
+        projectScoped: false,
+        children: [{
+          name: 'gl_resource_update',
+          enabled: false,
+          projectScoped: false,
+        }, {
+          name: 'gl_project_update',
+          enabled: false,
+          projectScoped: false,
+        }],
+      }, {
+        name: 'project_read',
+        enabled: false,
+        projectScoped: true,
+        projects: [],
+        children: [{
+          name: 'project_update',
+          enabled: false,
+          projectScoped: true,
+          projects: [],
+        }, {
+          name: 'project_resource_update',
+          enabled: false,
+          projectScoped: true,
+          projects: [],
+        }],
+      }];
+      const task = _import.buildOperatorPermissionsTask(scope, 'foo', permissions);
+      expect(task).to.be.a('function');
+
+      for (const p of permissions) {
+        mockApi().put(`/roles/foo/permissions/${p.name}`, p).reply(200, []);
+
+        for (const c of p.children) {
+          mockApi().put(`/roles/foo/permissions/${c.name}`, c).reply(200, []);
+        }
+      }
+
+      await task();
+    });
+
+    it('should import role permissions', async () => {
+      const roles = [{
+        id: 'appUserRoleId',
+        name: 'app user role',
+        version: 2,
+        type: 'userInApp',
+        permissions: [
+          { access: 'cru', path: '/thngs' },
+          { access: 'c', path: '/products' },
+        ],
+      }, {
+        id: 'operatorRoleId',
+        name: 'operator role',
+        permissions: [{
+          name: 'global_read',
+          enabled: false,
+          projectScoped: false,
+          children: [{
+            name: 'gl_resource_update',
+            enabled: false,
+            projectScoped: false,
+          }, {
+            name: 'gl_project_update',
+            enabled: false,
+            projectScoped: false,
+          }],
+        }, {
+          name: 'project_read',
+          enabled: false,
+          projectScoped: true,
+          projects: [],
+          children: [{
+            name: 'project_update',
+            enabled: false,
+            projectScoped: true,
+            projects: [],
+          }, {
+            name: 'project_resource_update',
+            enabled: false,
+            projectScoped: true,
+            projects: [],
+          }],
+        }],
+      }];
+      const originalRoles = JSON.parse(JSON.stringify(roles));
+
+      mockApi().put('/roles/appUserRoleId/permissions', roles[0].permissions).reply(200, []);
+
+      for (const p of roles[1].permissions) {
+        mockApi().put(`/roles/operatorRoleId/permissions/${p.name}`, p).reply(200, []);
+
+        for (const c of p.children) {
+          mockApi().put(`/roles/operatorRoleId/permissions/${c.name}`, c).reply(200, []);
+        }
+      }
+
+      const res = await _import.importRolePermissions(scope, roles, originalRoles);
+      expect(res).to.be.an('array');
     });
   });
 
