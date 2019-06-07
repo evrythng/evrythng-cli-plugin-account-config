@@ -6,7 +6,7 @@
   "author": "EVRYTHNG",
   "license": "Apache-2.0",
   "scripts": {
-    "test": "nyc mocha ./tests/index.spec.js"
+    "test": "nyc mocha ./tests/index.spec.js && rm -rf ./.nyc_output"
   },
   "repository": {
     "type": "git",
