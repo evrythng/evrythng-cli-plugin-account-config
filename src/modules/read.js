@@ -4,7 +4,7 @@
  */
 
 const pRetry = require('p-retry');
-const { VALID_TYPES } = require('../util');
+const { VALID_TYPES, printProgress, updateLine } = require('../util');
 
 let unknownProjects = [];
 
@@ -70,11 +70,12 @@ const getAllResources = (parent, type, projects, mapProjectIds = true, report = 
         }
 
         result.push(item);
+        printProgress(`Reading ${type}s`, result.length, '-');
       });
     }
 
     if (report) {
-      console.log(`Read ${result.length} ${type}s`);
+      updateLine(`Read ${result.length} ${type}s\n`);
     }
 
     return result;
