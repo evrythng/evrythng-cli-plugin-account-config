@@ -6,8 +6,7 @@
 const { validate } = require('jsonschema');
 const fs = require('fs');
 const evrythng = require('evrythng');
-const pRetry = require('p-retry');
-const { updateLine, printProgress } = require('../util');
+const { updateLine, printProgress, retry } = require('../util');
 
 /** The account configuration file schema. */
 const SCHEMA = require('../../data/account-config.schema.json');
@@ -53,7 +52,7 @@ const mapProjectNameToId = (projects, name) => {
  * @returns {function} Function that returns the creation task promise.
  */
 const buildCreateTask = (parent, payload, type) => async () => {
-  const res = await pRetry(async () => parent[type]().create(payload), { retries: 5 });
+  const res = await retry(async () => parent[type]().create(payload));
 
   // Scope update not needed or supported
   if (NO_SCOPES.includes(type)) {
@@ -62,7 +61,7 @@ const buildCreateTask = (parent, payload, type) => async () => {
 
   // Rescope using resolved scopes
   const updatePayload = { scopes: payload.scopes };
-  return pRetry(async () => parent[type](res.id).update(updatePayload), { retries: 5 });
+  return retry(async () => parent[type](res.id).update(updatePayload));
 };
 
 /**

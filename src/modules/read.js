@@ -3,8 +3,7 @@
  * All rights reserved. Use of this material is subject to license.
  */
 
-const pRetry = require('p-retry');
-const { VALID_TYPES, printProgress, updateLine } = require('../util');
+const { VALID_TYPES, printProgress, updateLine, retry } = require('../util');
 
 let unknownProjects = [];
 
@@ -57,7 +56,7 @@ const mapProjectName = (projects, id) => {
  * @returns {object[]} Array of read resources.
  */
 const getAllResources = (parent, type, projects, mapProjectIds = true, report = true) =>
-  pRetry(async () => {
+  retry(async () => {
     const it = parent[type]().setPerPage(100).setWithScopes().pages();
     const result = [];
 
@@ -79,7 +78,7 @@ const getAllResources = (parent, type, projects, mapProjectIds = true, report = 
     }
 
     return result;
-  }, { retries: 5 });
+  });
 
 /**
  * Get all applications for a given project.
@@ -103,7 +102,7 @@ const getAllApplications = async (operator, projects) => {
   const res = await Promise.all(projects.map(p => getProjectApplications(operator, projects, p)));
   const total = res.reduce((result, item) => result.concat(item), []);
 
-  console.log(`Read ${total.length} applications`);
+  updateLine(`Read ${total.length} applications\n`);
   return total;
 };
 
@@ -115,11 +114,17 @@ const getAllApplications = async (operator, projects) => {
  * @returns {Promise} Promise that resolves to an array of role permission sets
  */
 const getAllRolePermissions = async (operator, roles) => {
-  for (const role of roles) {
-    role.permissions = await operator.role(role.id).permission().read();
+  const tasks = roles.map(role => async () => {
+    printProgress(`Reading role permissions`, roles.indexOf(role), roles.length);
+    role.permissions = await retry(async () => operator.role(role.id).permission().read());
+  });
+
+  while (tasks.length) {
+    const next = tasks.splice(0, tasks.length >= 5 ? 5 : tasks.length);
+    await Promise.all(next.map(p => p()));
   }
 
-  console.log(`Read ${roles.length} role permissions`);
+  updateLine(`Read ${roles.length} role permissions\n`);
 };
 
 /**
@@ -149,6 +154,7 @@ const readAccount = async (operator, types) => {
 
   for (const t of VALID_TYPES) {
     result[t] = [];
+
     if (types.includes(t)) {
       result[t] = await map[t]();
     }

@@ -44,6 +44,8 @@ const exportToFile = async (jsonFile, typeList, operatorScope) => {
     throw new Error('Please specify $jsonFile to an output file.');
   }
 
+  console.log();
+
   const types = parseTypeList(typeList);
   const accountConfig = await readAccount(operatorScope, types);
   const {

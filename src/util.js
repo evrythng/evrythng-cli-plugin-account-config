@@ -1,3 +1,5 @@
+const pRetry = require('p-retry');
+
 /** Valid types for importing */
 const VALID_TYPES = [
   'projects',
@@ -28,8 +30,18 @@ const updateLine = (msg) => {
  */
 const printProgress = (label, index, max) => updateLine(`${label}: ${index + 1}/${max}`);
 
+
+/**
+ * Retry some async function up to 5 times.
+ *
+ * @param {function} func - The function to try.
+ * @returns {Promise}
+ */
+const retry = async func => pRetry(func, { retries: 5 });
+
 module.exports = {
   VALID_TYPES,
   updateLine,
   printProgress,
+  retry,
 };
