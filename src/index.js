@@ -40,8 +40,9 @@ module.exports = (api) => {
     firstArg: 'account-config',
     operations: {
       export: {
-        execute: async ([, jsonFile]) => exportToFile(jsonFile, await getOperator()),
-        pattern: 'export $jsonFile',
+        execute: async ([, jsonFile, typeList]) =>
+          exportToFile(jsonFile, typeList, await getOperator()),
+        pattern: 'export $jsonFile $typeList',
       },
       import: {
         execute: async ([, jsonFile]) => importFromFile(jsonFile, await getOperator()),

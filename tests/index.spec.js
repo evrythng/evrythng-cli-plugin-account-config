@@ -127,6 +127,22 @@ describe('evrythng-cli-plugin-account-config', () => {
     it('should export exportToFile method', async () => {
       expect(_export.exportToFile).to.be.a('function');
     });
+
+    it('should validate a type list', async () => {
+      const typeList = 'projects,places';
+      const expected = ['places'];
+      expect(_export.parseTypeList(typeList)).to.deep.equal(expected);
+    });
+
+    it('should validate an empty type list', async () => {
+      const typeList = '';
+      expect(() => _export.parseTypeList(typeList)).to.throw();
+    });
+
+    it('should validate an invalid type list', async () => {
+      const typeList = 'products';
+      expect(() => _export.parseTypeList(typeList)).to.throw();
+    });
   });
 
   describe('import.js', () => {

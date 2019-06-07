@@ -30,9 +30,11 @@ operations:
 ### Export Resources
 
 Export resources listed above to `jsonFile` (such as `./export.json`).
+`typeList` must be a comma-separated list of desired resource types from
+`projects`, `applications`, `actionTypes`, `products`, `places`, or `roles`.
 
 ```
-$ evrythng account-config export $jsonFile
+$ evrythng account-config export $jsonFile $typeList
 ```
 
 

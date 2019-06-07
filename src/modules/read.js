@@ -4,25 +4,26 @@
  */
 
 const pRetry = require('p-retry');
+const { VALID_TYPES } = require('../util');
 
 let unknownProjects = [];
 
 /** The default roles in every account */
 const DEFAULT_ROLES = [
-  "admin",
-  "none",
-  "Base Application User"
+  'admin',
+  'none',
+  'Base Application User',
 ];
 /** The default action types in every account */
 const DEFAULT_ACTION_TYPES = [
-  "checkins",
-  "commissions",
-  "decommissions",
-  "encodings",
-  "implicitScans",
-  "invalidScans",
-  "scans",
-  "shares"
+  'checkins',
+  'commissions',
+  'decommissions',
+  'encodings',
+  'implicitScans',
+  'invalidScans',
+  'scans',
+  'shares',
 ];
 
 /**
@@ -55,12 +56,8 @@ const mapProjectName = (projects, id) => {
  * @param {boolean} [report] - If true, report which resource is being read.
  * @returns {object[]} Array of read resources.
  */
-const getAllResources = (parent, type, projects, mapProjectIds = true, report = true) => {
-  if (report) {
-    console.log(`Reading all ${type}s...`);
-  }
-
-  return pRetry(async () => {
+const getAllResources = (parent, type, projects, mapProjectIds = true, report = true) =>
+  pRetry(async () => {
     const it = parent[type]().setPerPage(100).setWithScopes().pages();
     const result = [];
 
@@ -76,9 +73,12 @@ const getAllResources = (parent, type, projects, mapProjectIds = true, report = 
       });
     }
 
+    if (report) {
+      console.log(`Read ${result.length} ${type}s`);
+    }
+
     return result;
   }, { retries: 5 });
-};
 
 /**
  * Get all applications for a given project.
@@ -99,10 +99,11 @@ const getProjectApplications = (operator, projects, p) =>
  * @returns {Promise} Promise that resolves to all the applications.
  */
 const getAllApplications = async (operator, projects) => {
-  console.log('Reading all applications...');
-
   const res = await Promise.all(projects.map(p => getProjectApplications(operator, projects, p)));
-  return res.reduce((result, item) => result.concat(item), []);
+  const total = res.reduce((result, item) => result.concat(item), []);
+
+  console.log(`Read ${total.length} applications`);
+  return total;
 };
 
 /**
@@ -113,39 +114,47 @@ const getAllApplications = async (operator, projects) => {
  * @returns {Promise} Promise that resolves to an array of role permission sets
  */
 const getAllRolePermissions = async (operator, roles) => {
-  console.log('Reading all role permissions...');
-
   for (const role of roles) {
     role.permissions = await operator.role(role.id).permission().read();
   }
+
+  console.log(`Read ${roles.length} role permissions`);
 };
 
 /**
  * Read all the required resources in an account.
  *
  * @param {object} operator - Operator scope to use.
+ * @param {string[]} types - List of desired types to read.
  * @returns {Promise} Promise resolving to an bject containing the resources.
  */
-const readAccount = async (operator) => {
-  const projects = await getAllResources(operator, 'project', null, false);
-  const applications = await getAllApplications(operator, projects);
-  const products = await getAllResources(operator, 'product', projects);
-  const actionTypes = await getAllResources(operator, 'actionType', projects)
-    .then(res => res.filter(p => !DEFAULT_ACTION_TYPES.includes(p.name)));
-  const places = await getAllResources(operator, 'place', projects);
-  const roles = await getAllResources(operator, 'role', projects)
-    .then(res => res.filter(p => !DEFAULT_ROLES.includes(p.name)));
-  await getAllRolePermissions(operator, roles);
+const readAccount = async (operator, types) => {
+  const result = {};
 
-  return {
-    projects,
-    applications,
-    products,
-    actionTypes,
-    places,
-    roles,
-    unknownProjects,
+  const projects = await getAllResources(operator, 'project', null, false);
+  const map = {
+    applications: async () => getAllApplications(operator, projects),
+    products: async () => getAllResources(operator, 'product', projects),
+    actionTypes: async () => getAllResources(operator, 'actionType', projects)
+      .then(res => res.filter(p => !DEFAULT_ACTION_TYPES.includes(p.name))),
+    places: async () => getAllResources(operator, 'place', projects),
+    roles: async () => {
+      const res = await getAllResources(operator, 'role', projects)
+        .then(res => res.filter(p => !DEFAULT_ROLES.includes(p.name)));
+      await getAllRolePermissions(operator, res);
+      return res;
+    },
   };
+
+  for (const t of VALID_TYPES) {
+    result[t] = [];
+    if (types.includes(t)) {
+      result[t] = await map[t]();
+    }
+  }
+
+  Object.assign(result, { projects, unknownProjects });
+  return result;
 };
 
 module.exports = {
