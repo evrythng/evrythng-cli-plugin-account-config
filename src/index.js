@@ -51,13 +51,13 @@ module.exports = (api) => {
         helpPattern: 'import $jsonFile [update]',
       },
       compare: {
-        execute: async () => {
+        execute: async ([, typeList]) => {
           const { API_KEY: otherApiKey } = api.getSwitches();
           if (!otherApiKey) {
             throw new Error('Specify the \'other\' account using --api-key');
           }
 
-          return compareAccounts(await getOperator(), await getOperator(otherApiKey));
+          return compareAccounts(typeList, await getOperator(), await getOperator(otherApiKey));
         },
         pattern: 'compare',
         helpPattern: 'compare --api-key $OTHER_ACCOUNT_API_KEY',

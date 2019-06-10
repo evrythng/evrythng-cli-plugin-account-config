@@ -6,9 +6,10 @@
 const _ = require('lodash');
 const fs = require('fs');
 const { readAccount } = require('./read');
+const { parseTypeList } = require('../util');
 
 /** Path to the diff file. */
-const DIFF_PATH = `${__dirname}/../diff.json`;
+const DIFF_PATH = `${__dirname}/../../diff.json`;
 
 /**
  * Find all items of a type in current account that don't appear in other account.
@@ -51,14 +52,17 @@ const generateObjectDiff = (currentAccount, otherAccount) => ({
 /**
  * Read two accounts, and compare all resources by name.
  *
+ * @param {string} typeList - List of desired types, such as 'projects,roles,places'.
  * @param {object} currentScope - Currently selected Operator scope.
  * @param {object} otherScope - Other specified Operator scope.
  */
-const compareAccounts = async (currentScope, otherScope) => {
+const compareAccounts = async (typeList, currentScope, otherScope) => {
+  const types = parseTypeList(typeList);
+
   console.log('\nReading current account...');
-  const currentAccount = await readAccount(currentScope);
+  const currentAccount = await readAccount(currentScope, types);
   console.log('\nReading other account...');
-  const otherAccount = await readAccount(otherScope);
+  const otherAccount = await readAccount(otherScope, types);
 
   const diff = generateObjectDiff(currentAccount, otherAccount);
   console.log('\nOther account is missing:');

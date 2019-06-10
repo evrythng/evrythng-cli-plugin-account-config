@@ -58,6 +58,8 @@ some other account selected with the `--api-key` switch. A file `diff.json` is
 created containing all those found in the selected account but which do **not**
 appear in the other account (by `name`).
 
+`typeList` must be specified, in the same way as for 'Export Resources'.
+
 ```
-$ evrythng account-config compare --api-key $OTHER_ACCOUNT_API_KEY
+$ evrythng account-config compare $typeList --api-key $OTHER_ACCOUNT_API_KEY
 ```
