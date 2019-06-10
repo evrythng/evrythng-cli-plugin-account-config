@@ -5,6 +5,7 @@ const read = require('../src/modules/read');
 const _export = require('../src/modules/export');
 const _import = require('../src/modules/import');
 const compare = require('../src/modules/compare');
+const util = require('../src/util');
 
 const {
   testProjects,
@@ -150,28 +151,6 @@ describe('evrythng-cli-plugin-account-config', () => {
       expect(_import.importFromFile).to.be.a('function');
     });
 
-    it('should validate a configuration', async () => {
-      const config = {
-        projects: [{ name: 'test '}],
-        applications: [{ name: 'test' }],
-        products: [],
-        actionTypes: [{ name: '_Test' }],
-        places: [],
-        roles: [],
-      };
-
-      expect(() => _import.validateAccountConfig(config)).to.not.throw();
-    });
-
-    it('should validate a bad configuration', async () => {
-      const config = {
-        projects: [],
-        foo: 'bar',
-      };
-
-      expect(() => _import.validateAccountConfig(config)).to.throw();
-    });
-
     it('should map project name to known ID', async () => {
       const result = _import.mapProjectNameToId(testProjects, 'Project 2');
       expect(result).to.equal('UmSqCDt5BD8atKRRagdqUnAa');
@@ -199,14 +178,17 @@ describe('evrythng-cli-plugin-account-config', () => {
       expect(res).to.be.an('object');
     });
 
-    it('should build an update task', async () => {
+    it('should build an upsert task', async () => {
       const payload = { name: 'test' };
-      const task = _import.buildUpdateTask(scope, payload, 'product');
+      const task = _import.buildUpsertTask(scope, payload, 'product');
       expect(task).to.be.a('function');
 
       mockApi()
-        .put('/products', payload)
-        .reply(200, {});
+        .get('/products?filter=name%3Dtest')
+        .reply(200, [{ id: 'foo' }])
+      mockApi()
+        .put('/products/foo', payload)
+        .reply(200, { id: 'foo', name: 'foo' });
 
       const res = await task();
       expect(res).to.be.an('object');
@@ -218,22 +200,28 @@ describe('evrythng-cli-plugin-account-config', () => {
         { name: 'Product 2' },
         { name: 'Product 3' },
       ];
-      const tasks = payloads.map(p => _import.buildUpdateTask(scope, p, 'product'));
+      const tasks = payloads.map(p => _import.buildCreateTask(scope, p, 'product'));
 
       mockApi()
-        .put('/products', payloads[0])
-        .reply(200, { id: 'foo' })
-        .persist();
+        .post('/products', payloads[0])
+        .reply(201, { id: 'foo' })
       mockApi()
-        .put('/products', payloads[1])
-        .reply(200, { id: 'foo' })
-        .persist();
+        .put('/products/foo')
+        .reply(200, {})
       mockApi()
-        .put('/products', payloads[2])
-        .reply(200, { id: 'foo' })
-        .persist();
+        .post('/products', payloads[1])
+        .reply(201, { id: 'foo' })
+      mockApi()
+        .put('/products/foo')
+        .reply(200, {})
+      mockApi()
+        .post('/products', payloads[2])
+        .reply(201, { id: 'foo' })
+      mockApi()
+        .put('/products/foo')
+        .reply(200, {})
 
-      const res = await _import.runTypeTasks(tasks, 'product');
+      const res = await _import.runTasks(tasks, 'product');
       expect(res).to.be.an('array');
     });
 
@@ -377,4 +365,28 @@ describe('evrythng-cli-plugin-account-config', () => {
       expect(diff.roles).to.have.length(2);
     });
   });
+
+  describe('util.js', () => {
+    it('should validate a configuration', async () => {
+      const config = {
+        projects: [{ name: 'test '}],
+        applications: [{ name: 'test' }],
+        products: [],
+        actionTypes: [{ name: '_Test' }],
+        places: [],
+        roles: [],
+      };
+
+      expect(() => util.validateAccountConfig(config)).to.not.throw();
+    });
+
+    it('should validate a bad configuration', async () => {
+      const config = {
+        projects: [],
+        foo: 'bar',
+      };
+
+      expect(() => util.validateAccountConfig(config)).to.throw();
+    });
+  })
 });
