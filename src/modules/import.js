@@ -49,7 +49,8 @@ const buildUpsertTask = (parent, payload, type) => async () => {
   const params = { filter: `name=${payload.name}` };
   const found = await parent[type]().read({ params });
   if (found.length > 1) {
-    throw new Error(`More than one resource found for ${type} ${payload.name}`);
+    const duplicates = found.map(p => p.id).join('  \n');
+    throw new Error(`More than one resource found for ${type} ${payload.name}:\n${duplicates}\n`);
   }
 
   if (NO_SCOPES.includes(type)) {
