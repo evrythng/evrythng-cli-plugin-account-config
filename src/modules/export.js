@@ -5,32 +5,7 @@
 
 const fs = require('fs');
 const { readAccount } = require('./read');
-const { VALID_TYPES } = require('../util');
-
-/**
- * Get the types desired from the string parameter.
- *
- * @param {string} typeList - List of types, such as 'projects,applications,places'.
- * @returns {string[]} List of types.
- */
-const parseTypeList = (typeList) => {
-  if (!typeList) {
-    throw new Error('Please specify $typeList.');
-  }
-
-  const types = typeList.split(',');
-  if (!types.every(p => VALID_TYPES.includes(p))) {
-    throw new Error(`Invalid typeList. Choose from ${VALID_TYPES.join(', ')}`);
-  }
-
-  if (!types.includes('projects')) {
-    throw new Error('Invalid typeList. At least \'projects\' is required.');
-  }
-
-  // Projects always required
-  types.splice(types.indexOf('projects'), 1);
-  return types;
-};
+const { parseTypeList } = require('../util');
 
 /**
  * Export all account resources of selected types to a JSON file.

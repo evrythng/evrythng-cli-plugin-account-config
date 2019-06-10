@@ -45,8 +45,10 @@ module.exports = (api) => {
         pattern: 'export $jsonFile $typeList',
       },
       import: {
-        execute: async ([, jsonFile]) => importFromFile(jsonFile, await getOperator()),
+        execute: async ([, jsonFile, updateArg]) =>
+          importFromFile(jsonFile, updateArg, await getOperator()),
         pattern: 'import $jsonFile',
+        helpPattern: 'import $jsonFile [update]',
       },
       compare: {
         execute: async () => {

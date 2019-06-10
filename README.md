@@ -42,10 +42,12 @@ $ evrythng account-config export $jsonFile $typeList
 
 Import resources listed above from `jsonFile` into the currently selected
 account, if it is valid according to `data/account-config.schema.json`.
-Resources are always created, even if they may be considered to already exist.
+
+If `update` is specified, resources will be searched for by `name` and
+updated, else they will always be created new.
 
 ```
-$ evrythng account-config import $jsonFile
+$ evrythng account-config import $jsonFile [update]
 ```
 
 

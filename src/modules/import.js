@@ -3,28 +3,15 @@
  * All rights reserved. Use of this material is subject to license.
  */
 
-const { validate } = require('jsonschema');
 const fs = require('fs');
 const evrythng = require('evrythng');
-const { updateLine, printProgress, retry } = require('../util');
+const { updateLine, printProgress, validateAccountConfig } = require('../util');
 
-/** The account configuration file schema. */
-const SCHEMA = require('../../data/account-config.schema.json');
+
 /** Resource types that don't require scope updates. */
 const NO_SCOPES = ['project', 'application'];
 
-/**
- * Throw an error if the account configuration loaded does not pass the schema.
- *
- * @param {object} accountConfig - The loaded configuration object.
- */
-const validateAccountConfig = (accountConfig) => {
-  const validation = validate(accountConfig, SCHEMA);
-  if (validation.errors.length) {
-    const lines = validation.errors.map(p => p.stack).join('\n');
-    throw new Error(`Validation errors:\n${lines}`);
-  }
-};
+let willUpdate;
 
 /**
  * Map a project name to an ID. If it is not found, an error is thrown.
@@ -36,7 +23,7 @@ const validateAccountConfig = (accountConfig) => {
 const mapProjectNameToId = (projects, name) => {
   const found = projects.find(p => p.name === name);
   if (!found) {
-    throw new Error(`Project ${name} not found in file.`);
+    throw new Error(`Project ${name} not found in file. It may not exist or was not exported.`);
   }
 
   return found.id;
@@ -44,30 +31,49 @@ const mapProjectNameToId = (projects, name) => {
 
 /**
  * Return a task function that creates a given resource.
- * Also performs update for project and user scopes.
+ * Also performs update for project and user scopes if appropriate.
+ */
+const buildCreateTask = (parent, payload, type) => async () => {
+  const res = await parent[type]().create(payload);
+  return NO_SCOPES.includes(type)
+    ? res
+    : parent[type](type === 'actionType' ? res.name : res.id)
+      .update({ scopes: payload.scopes });
+};
+
+/**
+ * Like buildCreateTask(), but performs updates. First checks by name and
+ * updates if found.
+ */
+const buildUpsertTask = (parent, payload, type) => async () => {
+  const params = { filter: `name=${payload.name}` };
+  const found = await parent[type]().read({ params });
+  if (found.length > 1) {
+    throw new Error(`More than one resource found for ${type} ${payload.name}`);
+  }
+
+  if (NO_SCOPES.includes(type)) {
+    delete payload.scopes;
+  }
+
+  const [res] = found;
+  return found.length
+    ? parent[type](type === 'actionType' ? res.name : res.id).update(payload)
+    : buildCreateTask(parent, payload, type)();
+};
+
+/**
+ * Return either buildCreateTask or buildUpsertTask depending on willUpdate.
  *
  * @param {object} parent - Parent resource or scope.
  * @param {object} payload - The payload to use.
  * @param {string} type - The resource type, property of Operator scope.
- * @returns {function} Function that returns the creation task promise.
+ * @returns {function} Function that returns the creation task Promise.
  */
-const buildCreateTask = (parent, payload, type) => async () => {
-  const res = await retry(async () => parent[type]().create(payload));
-
-  // Scope update not needed or supported
-  if (NO_SCOPES.includes(type)) {
-    return res;
-  }
-
-  // Rescope using resolved scopes
-  const updatePayload = { scopes: payload.scopes };
-  return retry(async () => parent[type](res.id).update(updatePayload));
+const buildTask = (parent, payload, type) => {
+  const func = willUpdate ? buildUpsertTask : buildCreateTask;
+  return func(parent, payload, type);
 };
-
-/**
- * Like buildCreateTask(), but for PUT requests.
- */
-const buildUpdateTask = (parent, payload, type) => async () => parent[type]().update(payload);
 
 /**
  * Sequentially run all create tasks, showing progress.
@@ -76,7 +82,7 @@ const buildUpdateTask = (parent, payload, type) => async () => parent[type]().up
  * @param {string} type - Type label to use for progress.
  * @returns {Promise} Promise that resolves to array of all response bodies.
  */
-const runTypeTasks = async (tasks, type) => {
+const runTasks = async (tasks, type) => {
   const results = [];
   let errored = false;
 
@@ -85,7 +91,7 @@ const runTypeTasks = async (tasks, type) => {
     try {
       results.push(await task());
     } catch (e) {
-      updateLine(`Error for ${type}: ${e.message || e.errors[0]}\n`);
+      updateLine(`Error for ${type}: ${e.stack || e.errors[0]}\n`);
       errored = true;
     }
   }
@@ -114,10 +120,10 @@ const importResources = async (parent, resources, type, projects, resolveScopes 
       };
     }
 
-    return buildCreateTask(parent, item, type);
+    return buildTask(parent, item, type);
   });
 
-  return runTypeTasks(tasks, type);
+  return runTasks(tasks, type);
 };
 
 /**
@@ -132,11 +138,14 @@ const importApplications = async (operator, applications, projects) => {
   const tasks = applications.map((item) => {
     const [projectName] = item.scopes.projects;
     const project = projects.find(p => p.name === projectName);
+    if (!project) {
+      throw new Error(`No project '${projectName}' found for application ${item.name}`);
+    }
 
-    return buildCreateTask(operator.project(project.id), item, 'application');
+    return buildTask(operator.project(project.id), item, 'application');
   });
 
-  return runTypeTasks(tasks, 'application');
+  return runTasks(tasks, 'application');
 };
 
 /**
@@ -149,6 +158,13 @@ const importApplications = async (operator, applications, projects) => {
  * @returns {Promise} Promise that resolves when all permissions are updated.
  */
 const buildOperatorPermissionsTask = (operator, roleId, permissions) => async () => {
+  /**
+   * Update permissions for a named Operator permission, such as 'global_read'.
+   *
+   * @param {string} name - Name of the permission.
+   * @param {object} data - Permission update payload.
+   * @returns {Promise}
+   */
   const updatePermission = (name, data) => evrythng.api({
     url: `/roles/${roleId}/permissions/${name}`,
     apiKey: operator.apiKey,
@@ -169,75 +185,68 @@ const buildOperatorPermissionsTask = (operator, roleId, permissions) => async ()
  * Import all permissions for all roles.
  *
  * @param {object} operator - The Operator to use.
- * @param {object[]} newRoles - List of roles objects.
- * @param {object[]} originalRoles - List of original roles, containing 'permissions'.
+ * @param {object[]} newRoles - List of roles objects just created as part of import.
+ * @param {object[]} rolesWPerms - List of original roles, containing 'permissions'.
  * @returns {Promise} Promise that resolves to array of all task results.
  */
-const importRolePermissions = async (operator, newRoles, originalRoles) => {
+const importRolePermissions = async (operator, newRoles, rolesWPerms) => {
   const tasks = newRoles.map((newRole) => {
     // Find the right originalRole with permissions for this new role's name
-    const { permissions } = originalRoles.find(p => p.name === newRole.name);
+    const { permissions } = rolesWPerms.find(p => p.name === newRole.name);
 
-    // App User roles
-    if (permissions[0].path) {
-      return buildUpdateTask(operator.role(newRole.id), permissions, 'permission');
-    }
-
-    // Operator roles
-    if (permissions[0].name) {
-      return buildOperatorPermissionsTask(operator, newRole.id, permissions);
-    }
-
-    throw new Error(`Unknown permissions type!\n${JSON.stringify(permissions)}`);
+    return permissions[0].path
+      // App User roles
+      ? async () => operator.role(newRole.id).permission().update(permissions)
+      // Operator roles
+      : buildOperatorPermissionsTask(operator, newRole.id, permissions);
   });
 
-  return runTypeTasks(tasks, 'permission');
+  return runTasks(tasks, 'permission');
 };
 
 /**
  * Import resources into the current operator's account.
  *
  * @param {string} jsonFile - Path to the JSON file to load.
+ * @param {string} updateArg - 'update' parameter to update by name.
  * @param {object} operator - The Operator scope to do the loading.
  */
-const importFromFile = async (jsonFile, operator) => {
+const importFromFile = async (jsonFile, updateArg, operator) => {
   if (!jsonFile) {
     throw new Error('Please specify $jsonFile to an input file.');
   }
 
+  willUpdate = updateArg === 'update';
+  if (willUpdate) {
+    console.log('\n\'update\' was specified, will update by \'name\'. This will take longer.\n');
+  }
+
   const accountConfig = JSON.parse(fs.readFileSync(jsonFile, 'utf8'));
   validateAccountConfig(accountConfig);
-  console.log('File is valid\n');
 
-  const {
-    applications, products, actionTypes, places,
-  } = accountConfig;
-  let { projects, roles } = accountConfig;
+  const { applications, products, actionTypes, places, roles } = accountConfig;
+  const rolesWPerms = JSON.parse(JSON.stringify(roles));
+  let { projects } = accountConfig;
 
-  // roles are used for role creation, originalRoles for role permission assignment
-  let originalRoles = JSON.parse(JSON.stringify(roles));
-  roles.forEach(p => delete p.permissions);
-
-  // Update resources with ones imported
   projects = await importResources(operator, projects, 'project', projects, false);
-  roles = await importResources(operator, roles, 'role', projects);
-
   await importApplications(operator, applications, projects);
   await importResources(operator, products, 'product', projects);
   await importResources(operator, actionTypes, 'actionType', projects);
   await importResources(operator, places, 'place', projects);
-  await importRolePermissions(operator, roles, originalRoles);
+
+  roles.forEach(p => delete p.permissions);
+  const newRoles = await importResources(operator, roles, 'role', projects);
+  await importRolePermissions(operator, newRoles, rolesWPerms);
 
   console.log('\nImport complete!');
 };
 
 module.exports = {
   importFromFile,
-  validateAccountConfig,
   mapProjectNameToId,
   buildCreateTask,
-  buildUpdateTask,
-  runTypeTasks,
+  buildUpsertTask,
+  runTasks,
   importResources,
   importApplications,
   buildOperatorPermissionsTask,

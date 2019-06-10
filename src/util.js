@@ -1,3 +1,4 @@
+const { validate } = require('jsonschema');
 const pRetry = require('p-retry');
 
 /** Valid types for importing */
@@ -9,6 +10,24 @@ const VALID_TYPES = [
   'places',
   'roles',
 ];
+
+/** The account configuration file schema. */
+const SCHEMA = require('../data/account-config.schema.json');
+
+/**
+ * Throw an error if the account configuration loaded does not pass the schema.
+ *
+ * @param {object} accountConfig - The loaded configuration object.
+ */
+const validateAccountConfig = (accountConfig) => {
+  const validation = validate(accountConfig, SCHEMA);
+  if (validation.errors.length) {
+    const lines = validation.errors.map(p => p.stack).join('\n');
+    throw new Error(`Validation errors:\n${lines}`);
+  }
+
+  console.log('File is valid\n');
+};
 
 /**
  * Update the last log line, instead of creating a new one.
@@ -30,7 +49,6 @@ const updateLine = (msg) => {
  */
 const printProgress = (label, index, max) => updateLine(`${label}: ${index + 1}/${max}`);
 
-
 /**
  * Retry some async function up to 5 times.
  *
@@ -39,9 +57,37 @@ const printProgress = (label, index, max) => updateLine(`${label}: ${index + 1}/
  */
 const retry = async func => pRetry(func, { retries: 5 });
 
+/**
+ * Get the types desired from the string parameter.
+ *
+ * @param {string} typeList - List of types, such as 'projects,applications,places'.
+ * @param {boolean} mandatoryProjects - If true, `projects` must be included in typeList.
+ * @returns {string[]} List of types.
+ */
+const parseTypeList = (typeList, mandatoryProjects = true) => {
+  if (!typeList) {
+    throw new Error('Please specify $typeList.');
+  }
+
+  const types = typeList.split(',');
+  if (!types.every(p => VALID_TYPES.includes(p))) {
+    throw new Error(`Invalid typeList. Choose from ${VALID_TYPES.join(', ')}`);
+  }
+
+  if (!types.includes('projects') && mandatoryProjects) {
+    throw new Error('Invalid typeList. At least \'projects\' is required.');
+  }
+
+  // Projects always required
+  types.splice(types.indexOf('projects'), 1);
+  return types;
+};
+
 module.exports = {
   VALID_TYPES,
   updateLine,
   printProgress,
   retry,
+  parseTypeList,
+  validateAccountConfig,
 };
