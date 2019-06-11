@@ -23,22 +23,18 @@ const exportToFile = async (jsonFile, typeList, operatorScope) => {
 
   const types = parseTypeList(typeList);
   const accountConfig = await readAccount(operatorScope, types);
-  const {
-    projects,
-    applications,
-    products,
-    actionTypes,
-    places,
-    roles,
-
-    unknownProjects,
-  } = accountConfig;
+  const { unknownProjects, unknownProducts } = accountConfig;
 
   if (unknownProjects.length) {
     console.log(`\nUnknown projects:\n${JSON.stringify(unknownProjects)}`);
   }
 
+  if (unknownProducts.length) {
+    console.log(`\nUnknown products:\n${JSON.stringify(unknownProducts)}`);
+  }
+
   delete accountConfig.unknownProjects;
+  delete accountConfig.unknownProducts;
   fs.writeFileSync(jsonFile, JSON.stringify(accountConfig, null, 2), 'utf8');
   console.log(`\nWrote ${jsonFile}`);
 };

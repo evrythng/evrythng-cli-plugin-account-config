@@ -59,8 +59,8 @@ module.exports = (api) => {
 
           return compareAccounts(typeList, await getOperator(), await getOperator(otherApiKey));
         },
-        pattern: 'compare',
-        helpPattern: 'compare --api-key $OTHER_ACCOUNT_API_KEY',
+        pattern: 'compare $typeList',
+        helpPattern: 'compare $typeList --api-key $OTHER_ACCOUNT_API_KEY',
       },
     },
   };

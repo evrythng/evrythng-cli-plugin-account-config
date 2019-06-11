@@ -47,6 +47,7 @@ const generateObjectDiff = (currentAccount, otherAccount) => ({
   actionTypes: diffType(currentAccount, otherAccount, 'actionTypes'),
   places: diffType(currentAccount, otherAccount, 'places'),
   roles: diffType(currentAccount, otherAccount, 'roles'),
+  thngs: diffType(currentAccount, otherAccount, 'thngs'),
 });
 
 /**

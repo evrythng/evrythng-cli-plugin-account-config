@@ -6,6 +6,8 @@
 const { VALID_TYPES, printProgress, updateLine, retry } = require('../util');
 
 let unknownProjects = [];
+let unknownProducts = [];
+let products = [];
 
 /** The default roles in every account */
 const DEFAULT_ROLES = [
@@ -46,6 +48,26 @@ const mapProjectName = (projects, id) => {
 };
 
 /**
+ * Map a product ID to a known product name, or else leave as is.
+ *
+ * @param {string} id - The product ID to map.
+ * @param {object[]} products - Products to search.
+ * @returns {string} The product name if known, or else the unchanged ID.
+ */
+const getProductName = (products, id) => {
+  const found = products.find(p => p.id === id);
+  if (!found) {
+    if (!unknownProducts.includes(id) && id !== 'all') {
+      unknownProducts.push(id);
+    }
+
+    return id;
+  }
+
+  return found.name;
+};
+
+/**
  * Get all resources for a given type, mapping project IDs if required.
  *
  * @param {object} parent - This resource type's parent type or scope.
@@ -66,6 +88,11 @@ const getAllResources = (parent, type, projects, mapProjectIds = true, report = 
         // Map project IDs to names
         if (mapProjectIds && item.scopes && item.scopes.projects) {
           item.scopes.projects = item.scopes.projects.map(p => mapProjectName(projects, p));
+        }
+
+        // Thng product
+        if (type === 'thng' && item.product) {
+          item.product = getProductName(products, item.product);
         }
 
         result.push(item);
@@ -139,8 +166,14 @@ const readAccount = async (operator, types) => {
 
   const projects = await getAllResources(operator, 'project', null, false);
   const map = {
+    // Already loaded first
+    projects: async () => {},
+
+    products: async () => {
+      products = await getAllResources(operator, 'product', projects);
+      return products;
+    },
     applications: async () => getAllApplications(operator, projects),
-    products: async () => getAllResources(operator, 'product', projects),
     actionTypes: async () => getAllResources(operator, 'actionType', projects)
       .then(res => res.filter(p => !DEFAULT_ACTION_TYPES.includes(p.name))),
     places: async () => getAllResources(operator, 'place', projects),
@@ -150,6 +183,7 @@ const readAccount = async (operator, types) => {
       await getAllRolePermissions(operator, res);
       return res;
     },
+    thngs: async () => getAllResources(operator, 'thng', projects),
   };
 
   for (const t of VALID_TYPES) {
@@ -160,7 +194,7 @@ const readAccount = async (operator, types) => {
     }
   }
 
-  Object.assign(result, { projects, unknownProjects });
+  Object.assign(result, { projects, products, unknownProjects, unknownProducts });
   return result;
 };
 
@@ -171,4 +205,5 @@ module.exports = {
   getProjectApplications,
   getAllApplications,
   getAllRolePermissions,
+  getProductName,
 };

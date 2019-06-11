@@ -3,6 +3,11 @@ const testProjects = [
   { name: 'Project 2', id: 'UmSqCDt5BD8atKRRagdqUnAa' },
 ];
 
+const testProducts = [
+  { name: 'Beans', id: 'UKUmSqCDt5BD8atKRRagdqUn' },
+  { name: 'Cereals', id: 'AapscG7ctXwDcMwwwF5EwKsh' },
+];
+
 const testPermissions = [{
   name: 'global_read',
   enabled: false,
@@ -70,6 +75,9 @@ const testCurrentAccount = {
   ],
   products: [],
   roles: testRoles,
+  thngs: [{
+    name: 'Test Thng 1',
+  }]
 };
 
 const testOtherAccount = {
@@ -83,10 +91,12 @@ const testOtherAccount = {
   actionTypes: [],
   products: [],
   roles: [],
+  thngs: [],
 };
 
 module.exports = {
   testProjects,
+  testProducts,
   testPermissions,
   testRoles,
   testCurrentAccount,

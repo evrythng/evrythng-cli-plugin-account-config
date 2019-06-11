@@ -9,6 +9,7 @@ const VALID_TYPES = [
   'products',
   'places',
   'roles',
+  'thngs',
 ];
 
 /** The account configuration file schema. */
@@ -74,6 +75,10 @@ const parseTypeList = (typeList, mandatoryProjects = true) => {
     throw new Error(`Invalid typeList. Choose from ${VALID_TYPES.join(', ')}`);
   }
 
+  // Some types require others
+  if (types.includes('thngs') && !types.includes('products')) {
+    throw new Error('Reading \'thngs\' also requires \'products\'');
+  }
   if (!types.includes('projects') && mandatoryProjects) {
     throw new Error('Invalid typeList. At least \'projects\' is required.');
   }

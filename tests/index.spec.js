@@ -9,6 +9,7 @@ const util = require('../src/util');
 
 const {
   testProjects,
+  testProducts,
   testPermissions,
   testRoles,
   testCurrentAccount,
@@ -51,6 +52,18 @@ describe('evrythng-cli-plugin-account-config', () => {
       const id = 'unknownId';
 
       expect(read.mapProjectName(testProjects, id)).to.equal(id);
+    });
+
+    it('should map a product ID to product name', async () => {
+      const id = 'AapscG7ctXwDcMwwwF5EwKsh';
+
+      expect(read.getProductName(testProducts, id)).to.equal(testProducts[1].name);
+    });
+
+    it('should map unknown product ID to same ID', async () => {
+      const id = 'unknownId';
+
+      expect(read.getProductName(testProducts, id)).to.equal(id);
     });
 
     it('should request all resources of a type', async () => {
@@ -375,6 +388,7 @@ describe('evrythng-cli-plugin-account-config', () => {
         actionTypes: [{ name: '_Test' }],
         places: [],
         roles: [],
+        thngs: [],
       };
 
       expect(() => util.validateAccountConfig(config)).to.not.throw();

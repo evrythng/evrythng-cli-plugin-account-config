@@ -30,6 +30,23 @@ const mapProjectNameToId = (projects, name) => {
 };
 
 /**
+ * Resolve any project names to IDs.
+ *
+ * @param {object} item - Payload with scopes to resolve.
+ * @param {object[]} projects - Projects to search.
+ */
+const resolveScopes = (item, projects) => {
+  if (!item.scopes) {
+    return;
+  }
+
+  item.scopes = {
+    projects: item.scopes.projects.map(p => mapProjectNameToId(projects, p)),
+    users: item.scopes.users || [],
+  };
+};
+
+/**
  * Return a task function that creates a given resource.
  * Also performs update for project and user scopes if appropriate.
  */
@@ -108,17 +125,14 @@ const runTasks = async (tasks, type) => {
  * @param {object[]} resources - List of resources to import.
  * @param {string} type - The resource type, property of Operator scope.
  * @param {object[]} projects - The projects to use.
- * @param {boolean} [resolveScopes] - If true, attempt to resolve named project scopes.
+ * @param {boolean} [withScopes] - If true, attempt to resolve named project scopes.
  * @returns {Promise} Promise that resolves to array of all task results.
  */
-const importResources = async (parent, resources, type, projects, resolveScopes = true) => {
+const importResources = async (parent, resources, type, projects, withScopes = true) => {
   const tasks = resources.map((item) => {
-    if (resolveScopes && item.scopes) {
+    if (withScopes && item.scopes) {
       // Resolve project names to newly created project IDs
-      item.scopes = {
-        projects: item.scopes.projects.map(p => mapProjectNameToId(projects, p)),
-        users: item.scopes.users || [],
-      };
+      resolveScopes(item, projects);
     }
 
     return buildTask(parent, item, type);
@@ -206,6 +220,33 @@ const importRolePermissions = async (operator, newRoles, rolesWPerms) => {
 };
 
 /**
+ * Import Thngs, linking to products if required.
+ *
+ * @param {object} operator - The Operator to use.
+ * @param {object[]} thngs - List of thngs to be created.
+ * @param {object[]} products - List of products just created as part of import.
+ * @returns {Promise} Promise that resolves to array of all task results.
+ */
+const importThngs = async (operator, thngs, products) => {
+  const tasks = thngs.map((thng) => {
+    // Resolve product, if any
+    if (thng.product) {
+      const product = products.find(p => p.name === thng.product);
+      if (!product) {
+        throw new Error(`Product ${thng.product} not found`);
+      }
+
+      thng.product = product.id;
+    }
+
+    // Create or update Thng
+    return buildTask(operator, thng, 'thng');
+  });
+
+  return runTasks(tasks, 'thng');
+};
+
+/**
  * Import resources into the current operator's account.
  *
  * @param {string} jsonFile - Path to the JSON file to load.
@@ -225,15 +266,16 @@ const importFromFile = async (jsonFile, updateArg, operator) => {
   const accountConfig = JSON.parse(fs.readFileSync(jsonFile, 'utf8'));
   validateAccountConfig(accountConfig);
 
-  const { applications, products, actionTypes, places, roles } = accountConfig;
+  const { applications, actionTypes, places, roles, thngs } = accountConfig;
   const rolesWPerms = JSON.parse(JSON.stringify(roles));
-  let { projects } = accountConfig;
+  let { projects, products } = accountConfig;
 
   projects = await importResources(operator, projects, 'project', projects, false);
+  products = await importResources(operator, products, 'product', projects);
   await importApplications(operator, applications, projects);
-  await importResources(operator, products, 'product', projects);
   await importResources(operator, actionTypes, 'actionType', projects);
   await importResources(operator, places, 'place', projects);
+  await importThngs(operator, thngs, products);
 
   roles.forEach(p => delete p.permissions);
   const newRoles = await importResources(operator, roles, 'role', projects);
