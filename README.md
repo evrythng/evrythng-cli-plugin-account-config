@@ -3,11 +3,12 @@
 Plugin for [`evrythng-cli`](https://github.com/evrythng/evrythng-cli) that
 exports, imports, and compares account resource sets including:
 
+* Roles & role permissions
 * Projects & applications
-* Products
 * Action Types
 * Places
-* Roles & role permissions
+* Products
+* Thngs
 
 **When comparing accounts, all resources are compared by `name` only.**
 
