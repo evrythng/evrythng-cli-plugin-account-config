@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "required": [
+    "projects",
+    "applications",
+    "actionTypes",
+    "projects",
+    "places",
+    "roles",
+    "thngs"
+  ],
+  "properties": {
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "applications": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "actionTypes": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "products": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "places": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "roles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "permissions"
+        ],
+        "properties": {
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "thngs": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}

@@ -1,0 +1,304 @@
+{
+  "projects": [
+    {
+      "id": "U5m9pFsYpwc2ftwRamQ2emhk",
+      "createdAt": 1537194215641,
+      "tags": [
+        "dm2"
+      ],
+      "scopes": {
+        "users": [],
+        "projects": [
+          "U5m9pFsYpwc2ftwRamQ2emhk"
+        ]
+      },
+      "updatedAt": 1558690199716,
+      "name": "DC Testing",
+      "shortDomains": [
+        "tn.gg"
+      ]
+    },
+    {
+      "id": "UnghCKffVg8a9KwRwE5C9qBs",
+      "createdAt": 1516723029331,
+      "customFields": {
+        "key": "value"
+      },
+      "tags": [
+        "some",
+        "tags",
+        "dm2"
+      ],
+      "scopes": {
+        "users": [],
+        "projects": [
+          "UnghCKffVg8a9KwRwE5C9qBs"
+        ]
+      },
+      "updatedAt": 1543317540157,
+      "name": "Main Project",
+      "description": "New main project that I use EVRYTHNG for",
+      "shortDomains": [
+        "tn.gg"
+      ],
+      "identifiers": {
+        "key": "value"
+      }
+    }
+  ],
+  "applications": [
+    {
+      "id": "UpGt5FPEamA9traaRF8chtYh",
+      "createdAt": 1537194215814,
+      "customFields": {
+        "dm2": {
+          "backgroundColor": "#4AB",
+          "foregroundColor": "white",
+          "logoUrl": "https://demo-composer.evrythng.com/assets/images/default-logo.png"
+        }
+      },
+      "tags": [
+        "dm2"
+      ],
+      "scopes": {
+        "users": [],
+        "projects": [
+          "DC Testing"
+        ]
+      },
+      "updatedAt": 1556035615420,
+      "name": "Cereals Demos",
+      "project": "U5m9pFsYpwc2ftwRamQ2emhk",
+      "socialNetworks": {},
+      "appApiKey": "redacted",
+      "defaultRole": "base_app_user"
+    },
+    {
+      "id": "UpKdFWqafTHCtywRaGVtrbge",
+      "createdAt": 1538491840699,
+      "scopes": {
+        "users": [],
+        "projects": [
+          "Main Project"
+        ]
+      },
+      "updatedAt": 1538491840699,
+      "name": "Example Integration",
+      "project": "U5m9pFsYpwc2ftwRamQ2emhk",
+      "socialNetworks": {},
+      "appApiKey": "redacted",
+      "defaultRole": "base_app_user"
+    }
+  ],
+  "actionTypes": [
+    {
+      "id": "UMKCmP7AHdeaXgwawmRRyped",
+      "createdAt": 1555406547520,
+      "scopes": {
+        "users": [
+          "all"
+        ],
+        "projects": []
+      },
+      "updatedAt": 1555406547754,
+      "name": "_actionType1555406547319"
+    },
+    {
+      "id": "U6Kfm8MKskTRcpRwa3KBwaVs",
+      "createdAt": 1555406539533,
+      "scopes": {
+        "users": [
+          "all"
+        ],
+        "projects": [
+          "DC Testing"
+        ]
+      },
+      "updatedAt": 1555406539533,
+      "name": "_actionType1555406539329"
+    }
+  ],
+  "products": [
+    {
+      "id": "Uq9DeVNSh8DAffwwanWTEaTe",
+      "createdAt": 1559643345556,
+      "customFields": {
+        "color": "red",
+        "serial": 1559643343368
+      },
+      "tags": [
+        "updated"
+      ],
+      "scopes": {
+        "users": [
+          "all"
+        ],
+        "projects": [
+          "Main Project"
+        ]
+      },
+      "updatedAt": 1559643346766,
+      "properties": {},
+      "fn": "Test Product",
+      "name": "Test Product"
+    },
+    {
+      "id": "Uq8sW7gxGcsWM4aaR3sCGEhd",
+      "createdAt": 1559125345011,
+      "customFields": {
+        "timesScanned": "0"
+      },
+      "scopes": {
+        "users": [
+          "all"
+        ],
+        "projects": [
+          "Main Project"
+        ]
+      },
+      "updatedAt": 1559125356323,
+      "properties": {},
+      "fn": "Multiscan Product",
+      "name": "Multiscan Product",
+      "identifiers": {}
+    }
+  ],
+  "places": [
+    {
+      "id": "UqGVQhUpwYgEKtwRamDN3hds",
+      "createdAt": 1553266491668,
+      "customFields": {},
+      "tags": [],
+      "scopes": {
+        "users": [
+          "all"
+        ],
+        "projects": [
+          "Main Project"
+        ]
+      },
+      "updatedAt": 1553266491668,
+      "name": "Test Place",
+      "address": {},
+      "identifiers": {}
+    },
+    {
+      "id": "UqGwtBfYCCsD4fRaR4sQgbwk",
+      "createdAt": 1553003607636,
+      "customFields": {},
+      "tags": [],
+      "scopes": {
+        "users": [],
+        "projects": []
+      },
+      "updatedAt": 1553003607636,
+      "name": "Sealand",
+      "position": {
+        "type": "Point",
+        "coordinates": [
+          1.4825105667114258,
+          51.89439745702776
+        ]
+      },
+      "address": {
+        "street": "1 Sealand Road",
+        "city": "Sealand City"
+      },
+      "identifiers": {},
+      "longitude": 1.4825105667114258,
+      "latitude": 51.89439745702776
+    }
+  ],
+  "roles": [
+    {
+      "id": "5cf90ba7977a72003e108974",
+      "version": 2,
+      "type": "userInApp",
+      "name": "Read Only Thngs",
+      "description": "Read only Thngs",
+      "customFields": {},
+      "scopes": {
+        "roles": [],
+        "projects": []
+      },
+      "createdAt": 1559825319787,
+      "updatedAt": 1559825320029,
+      "permissions": [
+        {
+          "path": "/access$",
+          "access": "r",
+          "default": true
+        },
+        {
+          "path": "/accesses",
+          "access": "crd",
+          "default": true
+        },
+        {
+          "path": "/auth/all/logout",
+          "access": "c",
+          "default": true
+        },
+        {
+          "path": "/rateLimits$",
+          "access": "r",
+          "default": true
+        },
+        {
+          "path": "/roles",
+          "access": "r",
+          "default": true
+        }
+      ]
+    },
+    {
+      "id": "593e8f3fcfe9a42c00bf1434",
+      "name": "Read-only Role",
+      "description": "A role that can only read all projects and resources, but not create or edit any.",
+      "customFields": {
+        "enabledStates": [
+          "app"
+        ]
+      },
+      "permissions": [
+        {
+          "name": "global_read",
+          "enabled": true,
+          "projectScoped": false,
+          "children": [
+            {
+              "name": "gl_resource_update",
+              "enabled": false,
+              "projectScoped": false
+            },
+            {
+              "name": "gl_project_update",
+              "enabled": false,
+              "projectScoped": false
+            }
+          ]
+        },
+        {
+          "name": "project_read",
+          "enabled": false,
+          "projectScoped": true,
+          "projects": [],
+          "children": [
+            {
+              "name": "project_update",
+              "enabled": false,
+              "projectScoped": true,
+              "projects": []
+            },
+            {
+              "name": "project_resource_update",
+              "enabled": false,
+              "projectScoped": true,
+              "projects": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
