@@ -29,7 +29,9 @@ const getOperator = async (apiKey) => {
   const apiUrl = regions[current.region];
   evrythng.setup({ apiUrl });
 
-  return new evrythng.Operator(apiKey || current.apiKey).init();
+  const operator = new evrythng.Operator(apiKey || current.apiKey);
+  await operator.init();
+  return operator;
 };
 
 module.exports = (api) => {
